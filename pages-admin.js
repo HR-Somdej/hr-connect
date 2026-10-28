@@ -854,9 +854,9 @@ function settingsAudit() {
 var TYPE_TH = { CHOICE: 'เลือกตัวเลือก / จองไซซ์', ORDER: 'สั่งซื้อ + ชำระเงิน', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ' };
 function wsTabs(ev) {
   var t = ev.type === 'ORDER'
-    ? [['orders', 'คำสั่งซื้อ / ตรวจสลิป', 'shirt'], ['summary', 'สรุปสำหรับสั่งต่อ', 'table'], ['mail', 'อีเมล', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']]
-    : [['overview', 'ภาพรวม', 'chart'], ['tracking', 'ติดตามรายบุคคล', 'users'], ['reports', 'รายงาน', 'table'], ['mail', 'อีเมลติดตาม', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']];
-  if (!isAdmin()) t = t.filter(function (x) { return ['overview', 'tracking', 'reports'].indexOf(x[0]) >= 0; });
+    ? [['orders', 'คำสั่งซื้อ / ตรวจสลิป', 'shirt'], ['summary', 'สรุปสำหรับสั่งต่อ', 'table'], ['print', 'พิมพ์ / ใบเซ็นรับ', 'printer'], ['mail', 'อีเมล', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']]
+    : [['overview', 'ภาพรวม', 'chart'], ['tracking', 'ติดตามรายบุคคล', 'users'], ['reports', 'รายงาน', 'table'], ['print', 'พิมพ์ / ใบเซ็นรับ', 'printer'], ['mail', 'อีเมลติดตาม', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']];
+  if (!isAdmin()) t = t.filter(function (x) { return ['overview', 'tracking', 'reports', 'print'].indexOf(x[0]) >= 0; });
   return t;
 }
 ROUTES['admin/ev'] = function (params, q) {
@@ -880,7 +880,7 @@ ROUTES['admin/ev'] = function (params, q) {
     $('#page').classList.add('ws');
     var id1 = [ev.id];
     ({ overview: function () { ROUTES['admin/dashboard'](id1); }, tracking: function () { ROUTES['admin/tracking'](id1, q || {}); }, reports: function () { ROUTES['admin/reports'](id1, q || {}); },
-      mail: function () { ROUTES['admin/mail'](id1); }, settings: function () { editEvent(ev.id); }, orders: function () { adminOrdersPage(ev.id); }, summary: function () { adminOrderSummaryPage(ev.id); } })[tab]();
+      mail: function () { ROUTES['admin/mail'](id1); }, settings: function () { editEvent(ev.id); }, orders: function () { adminOrdersPage(ev.id); }, print: function () { printPage(ev); }, summary: function () { adminOrderSummaryPage(ev.id); } })[tab]();
   }).catch(errToast);
 };
 

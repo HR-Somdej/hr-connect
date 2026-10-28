@@ -111,7 +111,7 @@ function orderCardHtml(o) {
   var canEdit = canPay && OS.ev.status === 'OPEN';
   return '<div class="card ocard' + (o.cancelled ? ' cancelled' : '') + '"><div class="bd"><div class="row between"><div><div class="small muted">เลขที่คำสั่งซื้อ · ' + esc(thShort(o.createdAt)) + '</div><b style="font-size:18px;font-family:var(--font-head)">' + esc(o.id) + '</b></div>' + payChip(o) + '</div>' +
     '<div style="margin:10px 0" class="row">' + itemsHtml(o.items) + '</div>' +
-    '<div class="row between"><div class="muted small">' + o.qty + ' ตัว' + (o.shipping ? ' · ค่าส่ง ' + baht(o.shipping) + ' บาท' : '') + '</div><div style="font-family:var(--font-head);font-size:22px">' + baht(o.total) + ' <small style="font-size:14px">บาท</small></div></div>' +
+    '<div class="row between"><div class="muted small">' + o.qty + ' ตัว' + (o.payMethod === 'CASH' ? ' · ชำระเงินสด' : '') + (o.shipping ? ' · ค่าส่ง ' + baht(o.shipping) + ' บาท' : '') + '</div><div style="font-family:var(--font-head);font-size:22px">' + baht(o.total) + ' <small style="font-size:14px">บาท</small></div></div>' +
     (o.payStatus === 'REJECTED' && !o.cancelled ? '<div class="announce" style="background:var(--danger-soft);border-color:#f3c2c4;color:var(--danger);margin:10px 0 0">' + ic('alert') + '<div><b>สลิปไม่ผ่านการตรวจ:</b> ' + esc(o.rejectReason) + ' — กรุณาแนบสลิปใหม่</div></div>' : '') +
     (o.cancelled ? '' : orderSteps(o)) +
     '<div class="row" style="margin-top:12px">' + (canPay ? '<button class="btn primary" data-pay="' + esc(o.id) + '">' + ic('send') + (o.hasSlip ? 'แนบสลิปใหม่' : 'ชำระเงิน / แนบสลิป') + '</button>' : '') +
@@ -235,7 +235,7 @@ function payModal(o) {
       '<div class="amt"><small>ยอดที่ต้องโอน</small><b class="num">' + baht(o.total) + '</b> บาท</div><div class="small">' + esc(fmtPP(pay.promptpay)) + (pay.accountName ? '<br>' + esc(pay.accountName) : '') + '</div>' +
       '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn sm" id="pySave">' + ic('download') + 'บันทึกรูป QR</button><button class="btn sm" id="pyCopy">' + ic('copy') + 'คัดลอกเลขพร้อมเพย์</button></div></div>' +
       '<div><ol class="paysteps"><li><b>สแกน QR</b> ด้วยแอปธนาคาร (หรือบันทึกรูป QR แล้วเลือกจากอัลบั้มในแอป) ยอดเงินถูกใส่ไว้แล้ว</li><li>ตรวจชื่อบัญชีผู้รับ และยอด <b>' + baht(o.total) + ' บาท</b> ให้ตรง</li><li>บันทึกสลิป แล้ว<b>แนบสลิป</b>ด้านล่าง</li></ol>' +
-      (pay.note ? '<p class="small muted">' + esc(pay.note) + '</p>' : '') +
+      (pay.note ? '<p class="small muted">' + esc(pay.note) + '</p>' : '') + '<p class="small muted">' + ic('info') + ' ชำระเป็นเงินสด: ติดต่อฝ่ายทรัพยากรบุคคล เจ้าหน้าที่จะบันทึกการรับเงินให้ในระบบ (ไม่ต้องแนบสลิป)</p>' +
       '<label class="dropzone" id="pyDrop" style="display:block"><input type="file" id="pyFile" accept="image/*" class="sr">' + ic('upload') + '<div><b>แตะเพื่อเลือกรูปสลิป</b></div><div class="small muted">หรือลากไฟล์มาวาง · JPG/PNG</div></label>' +
       '<div id="pyPrev" style="margin-top:12px"></div></div></div>' });
   promptpayQrDataUrl(pay.promptpay, o.total).then(function (url) {
@@ -297,7 +297,7 @@ function drawAdminOrders() {
   var cnt = { all: s.orders, PENDING: s.byPay.PENDING || 0, UNPAID: s.byPay.UNPAID || 0, REJECTED: s.byPay.REJECTED || 0, PAID: s.byPay.PAID || 0, cancelled: s.cancelled };
   var h = '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' +
     '<div class="kpi hero"><small>' + ic('shirt') + ' คำสั่งซื้อ</small><b class="num">' + nf(s.orders) + '</b><div class="sub">' + nf(s.people) + ' คน · ' + nf(s.qty) + ' ตัว</div></div>' +
-    '<div class="kpi"><small>' + ic('check') + ' ชำระแล้ว</small><b class="num" style="color:var(--ok)">' + baht(s.paid) + '</b><div class="sub">' + nf(cnt.PAID) + ' รายการ · ' + nf(s.paidQty) + ' ตัว</div></div>' +
+    '<div class="kpi"><small>' + ic('check') + ' ชำระแล้ว</small><b class="num" style="color:var(--ok)">' + baht(s.paid) + '</b><div class="sub">' + nf(cnt.PAID) + ' รายการ · ' + nf(s.paidQty) + ' ตัว<br>โอน ' + baht(s.transfer) + ' · เงินสด ' + baht(s.cash) + '</div></div>' +
     '<button class="kpi" data-ff="PENDING" style="text-align:left;cursor:pointer"><small>' + ic('eye') + ' รอตรวจสลิป</small><b class="num" style="color:var(--info)">' + nf(cnt.PENDING) + '</b><div class="sub">' + baht(s.pending) + ' บาท · กดเพื่อตรวจ</div></button>' +
     '<button class="kpi" data-ff="UNPAID" style="text-align:left;cursor:pointer"><small>' + ic('clock') + ' รอชำระ</small><b class="num" style="color:var(--warn)">' + nf(cnt.UNPAID + cnt.REJECTED) + '</b><div class="sub">' + baht(s.unpaid) + ' บาท' + (cnt.REJECTED ? ' · ตีกลับ ' + cnt.REJECTED : '') + '</div></button>' +
     '<div class="kpi"><small>' + ic('users') + ' ยอดรวมทั้งหมด</small><b class="num">' + baht(s.total) + '</b><div class="sub">' + (d.allowedCount != null ? 'อนุญาต ' + nf(d.allowedCount) + ' คน' : 'ทุกคนสั่งได้') + '</div></div></div>';
@@ -326,8 +326,9 @@ function drawAoTable() {
       return '<tr><td>' + (o.payStatus === 'PAID' && !o.cancelled ? '<input type="checkbox" data-sel="' + esc(o.id) + '" ' + (AO.sel[o.id] ? 'checked' : '') + '>' : '') + '</td>' +
         '<td><div class="nm">' + esc(o.id) + ' · ' + esc(o.name) + '</div><div class="sub">' + esc(o.empCode + ' · ' + (o.unit || o.division)) + (o.phone ? ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a>' : '') + '</div><div class="sub">' + esc(thShort(o.createdAt)) + (o.note ? ' · 📝 ' + esc(o.note) : '') + '</div></td>' +
         '<td>' + itemsHtml(o.items) + '</td><td class="r num"><b>' + baht(o.total) + '</b>' + (o.shipping ? '<div class="sub">ค่าส่ง ' + baht(o.shipping) + '</div>' : '') + '</td>' +
-        '<td>' + payChip(o) + (o.payStatus === 'PAID' ? '<div class="sub">ตรวจโดย ' + esc(o.verifiedBy) + '</div>' : '') + (o.payStatus === 'PENDING' && !o.slipRefFull ? '<div class="sub" style="color:var(--warn)">อ่าน QR สลิปไม่ได้</div>' : '') + '</td>' +
+        '<td>' + payChip(o) + (o.payStatus === 'PAID' ? '<div class="sub">' + (o.payMethod === 'CASH' ? '<span class="chip warn" style="padding:0 8px">' + ic('cash') + ' เงินสด</span> ' : o.payMethod === 'TRANSFER' ? 'โอน · ' : '') + 'โดย ' + esc(o.verifiedBy) + (o.cashNote ? ' · ' + esc(o.cashNote) : '') + '</div>' : '') + (o.payStatus === 'PENDING' && !o.slipRefFull ? '<div class="sub" style="color:var(--warn)">อ่าน QR สลิปไม่ได้</div>' : '') + '</td>' +
         '<td class="r" style="white-space:nowrap">' + (o.hasSlip ? '<button class="btn sm ' + (o.payStatus === 'PENDING' ? 'primary' : '') + '" data-rv="' + esc(o.id) + '">' + ic('eye') + (o.payStatus === 'PENDING' ? 'ตรวจสลิป' : 'สลิป') + '</button> ' : (o.payStatus !== 'PAID' && !o.cancelled ? '<button class="btn sm" data-rv="' + esc(o.id) + '">' + ic('check') + 'ยืนยันชำระ</button> ' : '')) +
+        (o.payStatus !== 'PAID' && !o.cancelled ? '<button class="btn sm" data-cash="' + esc(o.id) + '" title="บันทึกรับเงินสด">' + ic('cash') + 'เงินสด</button> ' : '') +
         '<button class="iconbtn" data-ed="' + esc(o.id) + '" title="แก้ไข">' + ic('edit') + '</button><button class="iconbtn" data-hi="' + esc(o.id) + '" title="ประวัติ">' + ic('history') + '</button></td></tr>';
     }).join('') : '<tr><td colspan="6"><div class="empty">' + ic('shirt') + '<p>ไม่มีคำสั่งซื้อในหมวดนี้</p></div></td></tr>') + '</tbody></table>' +
     '<div class="mlist">' + slice.map(function (o) { return '<div class="mi"><div class="x"><b>' + esc(o.id) + ' · ' + esc(o.name) + '</b><small>' + esc(o.unit || o.division) + '</small><div class="row" style="margin-top:4px">' + itemsHtml(o.items) + '</div><div class="row" style="margin-top:6px">' + payChip(o) + '<b class="num">' + baht(o.total) + ' ฿</b></div></div><div style="display:flex;flex-direction:column;gap:6px">' + (o.hasSlip || (o.payStatus !== 'PAID' && !o.cancelled) ? '<button class="btn sm ' + (o.payStatus === 'PENDING' ? 'primary' : '') + '" data-rv="' + esc(o.id) + '">' + ic('eye') + '</button>' : '') + '<button class="btn sm" data-ed="' + esc(o.id) + '">' + ic('edit') + '</button></div></div>'; }).join('') + '</div></div>' +
@@ -337,6 +338,7 @@ function drawAoTable() {
   $$('[data-sel]').forEach(function (c) { c.onchange = function () { AO.sel[c.dataset.sel] = c.checked; drawAoTable(); }; });
   $('#aoAll').onchange = function () { var on = this.checked; aoFiltered().forEach(function (o) { if (o.payStatus === 'PAID' && !o.cancelled) AO.sel[o.id] = on; }); drawAoTable(); };
   $$('[data-rv]').forEach(function (b) { b.onclick = function () { reviewModal(b.dataset.rv); }; });
+  $$('[data-cash]').forEach(function (b) { b.onclick = function () { cashModal(AO.d.orders.filter(function (o) { return o.id === b.dataset.cash; })[0]); }; });
   $$('[data-ed]').forEach(function (b) { b.onclick = function () { adminOrderModal(AO.d.orders.filter(function (o) { return o.id === b.dataset.ed; })[0]); }; });
   $$('[data-hi]').forEach(function (b) { b.onclick = function () { orderHistory(b.dataset.hi); }; });
   var go = $('#bkGo');
@@ -352,7 +354,7 @@ function reviewModal(id) {
   var o = AO.d.orders.filter(function (x) { return x.id === id; })[0];
   var pend = aoFiltered().filter(function (x) { return x.payStatus === 'PENDING' && x.id !== id; });
   var m = modal({ title: 'ตรวจการชำระ · ' + esc(o.id), size: 'xl',
-    foot: (o.payStatus !== 'UNPAID' && !o.cancelled ? '<button class="btn ghost" id="rvUndo" style="margin-right:auto">ย้อนเป็นรอชำระ</button>' : '') + '<button class="btn danger" id="rvRej">' + ic('x') + 'ตีกลับ</button><button class="btn primary" id="rvOk" data-busy="กำลังบันทึก…">' + ic('check') + 'ยืนยันชำระ ' + baht(o.total) + ' บาท' + (pend.length ? ' · ถัดไป' : '') + '</button>',
+    foot: (o.payStatus !== 'UNPAID' && !o.cancelled ? '<button class="btn ghost" id="rvUndo" style="margin-right:auto">ย้อนเป็นรอชำระ</button>' : '') + (o.payStatus !== 'PAID' && !o.cancelled ? '<button class="btn" id="rvCash">' + ic('cash') + 'รับเงินสดแทน</button>' : '') + '<button class="btn danger" id="rvRej">' + ic('x') + 'ตีกลับ</button><button class="btn primary" id="rvOk" data-busy="กำลังบันทึก…">' + ic('check') + 'ยืนยันชำระ ' + baht(o.total) + ' บาท' + (pend.length ? ' · ถัดไป' : '') + '</button>',
     body: '<div class="paygrid"><div class="slipbig" id="rvSlip">' + (o.hasSlip ? skel(1) : '<div class="empty">' + ic('info') + '<p>ไม่มีสลิป<br><span class="small">ใช้กรณีชำระเงินสด/โอนแล้วส่งสลิปทางอื่น</span></p></div>') + '</div>' +
       '<div><dl class="kv"><dt>ผู้สั่ง</dt><dd>' + esc(o.name) + '<div class="small muted">' + esc(o.empCode + ' · ' + (o.unit || '') + ' ' + o.division) + '</div></dd><dt>โทร</dt><dd>' + esc(o.phone || '-') + '</dd><dt>สั่งเมื่อ</dt><dd>' + esc(thDate(o.createdAt)) + '</dd>' +
       '<dt>แนบสลิป</dt><dd>' + (o.slipAt ? esc(thDate(o.slipAt)) : '-') + '</dd><dt>QR บนสลิป</dt><dd>' + (o.slipRefFull ? '<span class="chip ok">อ่านได้ ไม่ซ้ำ</span><div class="small muted" style="word-break:break-all">' + esc(o.slipRefFull.slice(0, 60)) + '</div>' : '<span class="chip warn">อ่านไม่ได้ — ตรวจด้วยตา</span>') + '</dd><dt>สถานะ</dt><dd>' + payChip(o) + '</dd></dl>' +
@@ -368,6 +370,7 @@ function reviewModal(id) {
   };
   $('#rvOk').onclick = function () { busy(this, api('verifyOrder', { orderId: id, action: 'PAID', reason: $('#rvReason').value.trim() })).then(function (r) { after(r, o.id + ' ยืนยันชำระแล้ว'); }).catch(errToast); };
   $('#rvRej').onclick = function () { var why = $('#rvReason').value.trim(); if (!why) { toast('กรุณาระบุเหตุผลที่ตีกลับ', 'warn'); $('#rvReason').focus(); return; } busy(this, api('verifyOrder', { orderId: id, action: 'REJECT', reason: why })).then(function (r) { after(r, o.id + ' ตีกลับแล้ว ผู้สั่งต้องแนบสลิปใหม่'); }).catch(errToast); };
+  var rc = $('#rvCash'); if (rc) rc.onclick = function () { m.close(); cashModal(o); };
   var u = $('#rvUndo'); if (u) u.onclick = function () { busy(this, api('verifyOrder', { orderId: id, action: 'UNPAID', reason: $('#rvReason').value.trim() })).then(function (r) { pend = []; after(r, o.id + ' ย้อนเป็นรอชำระ'); }).catch(errToast); };
 }
 function orderHistory(id) {
@@ -385,13 +388,14 @@ function adminOrderModal(o) {
         var k = op.key + '|' + s.code; return '<div class="qcell"><div class="qtop"><b>' + esc(s.code) + '</b><span class="price">' + baht(s.price) + '</span></div><input class="input" type="number" min="0" data-am="' + esc(k) + '" value="' + (cart[k] || 0) + '"></div>';
       }).join('') + '</div>';
     }).join('') + '<div class="grid2" style="margin-top:12px"><div class="field"><label class="f">หมายเหตุผู้สั่ง</label><input class="input" id="amNote" value="' + esc(o ? o.note : '') + '"></div><div class="field"><label class="f">บันทึกของแอดมิน</label><input class="input" id="amAdm" value="' + esc(o ? o.adminNote || '' : '') + '"></div></div>' +
+    (!o || o.payStatus !== 'PAID' ? '<div class="row" style="gap:12px;margin-top:4px"><label class="switch"><input type="checkbox" id="amCash"><span class="tr"></span>รับเงินสดแล้ว (บันทึกเป็นชำระแล้ว)</label><input class="input" id="amCashNote" placeholder="เลขใบเสร็จ/หมายเหตุ (ถ้ามี)" style="flex:1;min-width:180px"></div>' : '') +
     (o && o.payStatus === 'PAID' ? '<div class="announce">' + ic('alert') + '<div>คำสั่งซื้อนี้ชำระแล้ว ถ้าแก้จำนวนจนยอดเปลี่ยน ต้องเก็บเงินเพิ่ม/คืนเงินส่วนต่างเอง</div></div>' : '');
   var m = modal({ title: o ? 'แก้ไขคำสั่งซื้อ' : 'สร้างคำสั่งซื้อแทน', size: 'lg', body: body,
     foot: (o ? '<button class="btn danger" id="amCancel" style="margin-right:auto">' + (o.cancelled ? 'คืนสถานะคำสั่งซื้อ' : ic('trash') + 'ยกเลิกคำสั่งซื้อ') + '</button>' : '') + '<button class="btn" data-x>ปิด</button><button class="btn primary" id="amSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
   $('#amSave').onclick = function () {
     var items = $$('[data-am]', m.el).map(function (i) { var p = i.dataset.am.split('|'); return { optKey: p[0], sizeCode: p[1], qty: +i.value || 0 }; }).filter(function (i) { return i.qty > 0; });
     var emp = o ? o.empCode : $('#amEmp').value.trim();
-    busy(this, api('adminSaveOrder', { eventId: ev.id, orderId: o ? o.id : '', empCode: emp, items: items, note: $('#amNote').value, adminNote: $('#amAdm').value })).then(function (r) { m.close(); toast((o ? 'แก้ไข ' : 'สร้าง ') + r.id + ' · ' + baht(r.total) + ' บาท', 'ok'); adminOrdersPage(AO.id); }).catch(errToast);
+    busy(this, api('adminSaveOrder', { eventId: ev.id, orderId: o ? o.id : '', empCode: emp, items: items, note: $('#amNote').value, adminNote: $('#amAdm').value, paidCash: !!($('#amCash') && $('#amCash').checked), cashNote: $('#amCashNote') ? $('#amCashNote').value : '' })).then(function (r) { m.close(); toast((o ? 'แก้ไข ' : 'สร้าง ') + r.id + ' · ' + baht(r.total) + ' บาท', 'ok'); adminOrdersPage(AO.id); }).catch(errToast);
   };
   var c = $('#amCancel');
   if (c) c.onclick = function () {
@@ -434,7 +438,7 @@ function adminOrderSummaryPage(id) {
       var sum = 0; var rows = o.sizes.map(function (s) { var n = paidOnly ? s.paid : s.all; sum += n; tq += n; tm += n * (+s.price || 0); return '<tr><td><b>' + esc(s.code) + '</b></td><td class="r num">' + baht(s.price) + '</td><td class="r num" style="font-size:16px"><b>' + n + '</b></td><td class="r num">' + baht(n * s.price) + '</td></tr>'; }).join('');
       return '<h4 style="margin:8px 0 4px">' + esc(o.label) + ' · ' + sum + ' ตัว</h4><table class="t"><thead><tr><th>ไซซ์</th><th class="r">ราคา</th><th class="r">จำนวน</th><th class="r">เป็นเงิน</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }).join('') + '<div class="row between" style="margin-top:12px;font-size:17px"><b>รวม ' + nf(tq) + ' ตัว</b><b>' + baht(tm) + ' บาท</b></div></div></div>' +
-      '<div class="card"><div class="hd"><h3>' + ic('chart') + ' การเงิน</h3></div><div class="bd"><dl class="kv"><dt>ยอดรวมทั้งหมด</dt><dd>' + baht(d.summary.total) + ' บาท</dd><dt>ชำระแล้ว</dt><dd style="color:var(--ok)">' + baht(d.summary.paid) + ' บาท</dd><dt>รอตรวจสลิป</dt><dd>' + baht(d.summary.pending) + ' บาท</dd><dt>รอชำระ</dt><dd style="color:var(--warn)">' + baht(d.summary.unpaid) + ' บาท</dd><dt>ยกเลิก</dt><dd>' + nf(d.summary.cancelled) + ' รายการ</dd></dl>' +
+      '<div class="card"><div class="hd"><h3>' + ic('chart') + ' การเงิน</h3></div><div class="bd"><dl class="kv"><dt>ยอดรวมทั้งหมด</dt><dd>' + baht(d.summary.total) + ' บาท</dd><dt>ชำระแล้ว</dt><dd style="color:var(--ok)">' + baht(d.summary.paid) + ' บาท</dd><dt>· โอน (สลิป)</dt><dd>' + baht(d.summary.transfer) + ' บาท (' + d.summary.transferN + ')</dd><dt>· เงินสด</dt><dd>' + baht(d.summary.cash) + ' บาท (' + d.summary.cashN + ')</dd><dt>รอตรวจสลิป</dt><dd>' + baht(d.summary.pending) + ' บาท</dd><dt>รอชำระ</dt><dd style="color:var(--warn)">' + baht(d.summary.unpaid) + ' บาท</dd><dt>ยกเลิก</dt><dd>' + nf(d.summary.cancelled) + ' รายการ</dd></dl>' +
       '<h4 style="margin:16px 0 6px">สถานะจัดส่ง (ชำระแล้ว)</h4>' + FULFIL_KEYS.map(function (k) { return '<div class="row between" style="padding:4px 0"><span>' + FULFIL_TH[k] + '</span><b class="num">' + nf(d.summary.byFulfil[k] || 0) + '</b></div>'; }).join('') + '</div></div></div>';
     $('#page').innerHTML = h;
     $$('#smSeg [data-p]').forEach(function (b) { b.onclick = function () { AO = AO || {}; AO.sumPaid = b.dataset.p === '1'; adminOrderSummaryPage(id); }; });
@@ -446,9 +450,19 @@ function exportOrders(d) {
   var ev = d.event, live = d.orders.filter(function (o) { return !o.cancelled; });
   var sz = [['แบบ', 'ไซซ์', 'ราคา', 'จำนวน (ทั้งหมด)', 'จำนวน (ชำระแล้ว)', 'เป็นเงิน (ชำระแล้ว)']];
   d.sizes.forEach(function (o) { o.sizes.forEach(function (s) { sz.push([o.label, s.code, +s.price, s.all, s.paid, s.paid * s.price]); }); });
-  var ord = [['เลขที่', 'วันที่สั่ง', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'โทร', 'รายการ', 'จำนวน', 'ค่าส่ง', 'ยอดรวม', 'สถานะชำระ', 'สถานะจัดส่ง', 'ตรวจโดย', 'หมายเหตุ', 'ยกเลิก']];
-  d.orders.forEach(function (o) { ord.push([o.id, thDate(o.createdAt), o.empCode, o.name, o.unit, o.division, o.phone, o.items.map(function (i) { return i.optLabel.replace(/^แบบ/, '') + ' ' + i.sizeCode + '×' + i.qty; }).join(', '), o.qty, o.shipping, o.total, PAY_TH[o.payStatus], FULFIL_TH[o.fulfil] || '', o.verifiedBy || '', o.note || '', o.cancelled ? 'ยกเลิก' : '']); });
+  var ord = [['เลขที่', 'วันที่สั่ง', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'โทร', 'รายการ', 'จำนวน', 'ค่าส่ง', 'ยอดรวม', 'สถานะชำระ', 'วิธีชำระ', 'สถานะจัดส่ง', 'ตรวจโดย', 'หมายเหตุ', 'ยกเลิก']];
+  d.orders.forEach(function (o) { ord.push([o.id, thDate(o.createdAt), o.empCode, o.name, o.unit, o.division, o.phone, o.items.map(function (i) { return i.optLabel.replace(/^แบบ/, '') + ' ' + i.sizeCode + '×' + i.qty; }).join(', '), o.qty, o.shipping, o.total, PAY_TH[o.payStatus], { CASH: 'เงินสด', TRANSFER: 'โอน', OTHER: 'อื่น ๆ' }[o.payMethod] || '', FULFIL_TH[o.fulfil] || '', o.verifiedBy || '', o.note || '', o.cancelled ? 'ยกเลิก' : '']); });
   var lines = [['เลขที่', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'แบบ', 'ไซซ์', 'จำนวน', 'ราคา', 'เป็นเงิน', 'สถานะชำระ']];
   live.forEach(function (o) { o.items.forEach(function (i) { lines.push([o.id, o.empCode, o.name, o.unit, o.division, i.optLabel, i.sizeCode, i.qty, i.price, i.amount, PAY_TH[o.payStatus]]); }); });
   return exportXlsx('คำสั่งซื้อ_' + ev.title.replace(/[\\\/:*?"<>|]/g, '').slice(0, 30) + '_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'สรุปไซซ์', rows: sz }, { name: 'คำสั่งซื้อ', rows: ord }, { name: 'รายการรายตัว', rows: lines }]);
+}
+
+function cashModal(o) {
+  var m = modal({ title: 'รับเงินสด · ' + esc(o.id), foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="csOk" data-busy="กำลังบันทึก…">' + ic('cash') + 'ยืนยันรับเงินสด ' + baht(o.total) + ' บาท</button>',
+    body: '<div class="center"><div class="bigicon acc">' + ic('cash') + '</div><div class="muted">' + esc(o.name) + ' · ' + esc(o.empCode) + '</div><div style="font-family:var(--font-head);font-size:40px;margin:6px 0">' + baht(o.total) + ' <small style="font-size:16px">บาท</small></div><div class="row" style="justify-content:center">' + itemsHtml(o.items) + '</div></div>' +
+      '<div class="field" style="margin-top:14px"><label class="f">เลขที่ใบเสร็จ / หมายเหตุ (ถ้ามี)</label><input class="input" id="csNote" placeholder="เช่น ใบเสร็จเล่ม 1 เลขที่ 023"></div>' +
+      '<div class="small muted">' + ic('info') + ' ระบบบันทึกว่า "ชำระแล้ว · เงินสด" โดยรหัสของคุณ และส่งอีเมลยืนยันถึงผู้สั่ง (ถ้ามีอีเมล)</div>' });
+  $('#csOk').onclick = function () {
+    busy(this, api('verifyOrder', { orderId: o.id, action: 'PAID', method: 'CASH', reason: $('#csNote').value.trim() })).then(function () { m.close(); toast(o.id + ' รับเงินสด ' + baht(o.total) + ' บาทแล้ว', 'ok'); adminOrdersPage(AO.id); }).catch(errToast);
+  };
 }

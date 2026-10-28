@@ -1,6 +1,6 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-28.3';
+var HRC_BUILD = '2569-10-28.4';
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -80,6 +80,8 @@ var ICONS = {
   arrowr: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowl: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
   up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
+  cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+  printer: '<path d="M6 9V2h12v7"/><rect x="2" y="9" width="20" height="9" rx="2"/><path d="M6 14h12v8H6z"/>',
   building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>'
 };
 function ic(name, cls) { return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>'; }
