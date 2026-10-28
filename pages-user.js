@@ -25,7 +25,10 @@ function showLogin() {
     '<button class="btn primary lg block" id="lgBtn" data-busy="กำลังตรวจสอบกับระบบบุคลากร…">' + ic('key') + 'เข้าสู่ระบบ</button>' +
     '<div class="note">' + ic('shield') + '<div>ระบบตรวจสอบตัวตนกับฐานข้อมูลบุคลากรของโรงพยาบาลโดยตรง <b>ไม่จัดเก็บเลขบัตรประชาชน</b> · จดจำการเข้าระบบบนเครื่องนี้ 7 วัน</div></div>' +
     '<div class="status" id="lgStatus"><span class="dot"></span>กำลังเชื่อมต่อระบบ…</div>' +
+    '<div class="row" style="justify-content:center;margin-top:12px;gap:14px"><button type="button" class="linkbtn" id="lgHelp">' + ic('help') + ' วิธีเข้าสู่ระบบ</button><a class="linkbtn" href="manual.html?v=' + HRC_BUILD + '#staff" target="_blank" rel="noopener">' + ic('book') + ' คู่มือการใช้งาน</a></div>' +
     '<div class="ver">v' + HRC_VERSION + ' · ' + HRC_BUILD + '</div></form></section></div>';
+  var hf = $('#helpFab'); if (hf) hf.style.display = 'none';
+  $('#lgHelp').onclick = function () { openHelp('login'); };
 
   var emp = $('#lgEmp'), cid = $('#lgCid');
   // กรองเฉพาะตัวเลข โดยไม่ใส่ขีดอัตโนมัติ (ใส่ขีดทำให้เคอร์เซอร์กระโดด) — แก้ค่าเฉพาะเมื่อมีอักขระที่ไม่ใช่ตัวเลข และคงตำแหน่งเคอร์เซอร์
@@ -92,7 +95,7 @@ ROUTES.home = function () {
   var h = '<div class="welcome"><div class="avatar">' + esc(initials(me.firstName || me.name)) + '</div><div style="position:relative;z-index:1;min-width:0"><h2>สวัสดี คุณ' + esc(me.firstName || me.name) + '</h2>' +
     '<p>' + esc([me.position, me.unit, me.division].filter(Boolean).join(' · ')) + '</p></div></div>';
   var evs = b.events || [];
-  h += '<div class="row between" style="margin-bottom:12px"><h2 style="font-size:19px">กิจกรรมของฉัน</h2><span class="muted small">' + evs.length + ' กิจกรรม</span></div>';
+  h += '<div class="row between" style="margin-bottom:12px"><h2 style="font-size:19px">กิจกรรมของฉัน</h2><div class="row" style="gap:10px"><span class="muted small">' + evs.length + ' กิจกรรม</span>' + helpBtn() + '</div></div>';
   if (!evs.length) h += '<div class="card empty">' + ic('calendar') + '<p>ยังไม่มีกิจกรรมที่เปิดสำหรับท่านในขณะนี้</p></div>';
   else h += '<div class="evgrid">' + evs.map(evCard).join('') + '</div>';
   h += '<div class="card" style="margin-top:22px"><div class="hd"><h3>' + ic('user') + ' ข้อมูลของฉัน</h3><span class="muted small">จากระบบบุคลากรของโรงพยาบาล</span></div><div class="bd"><dl class="kv">' +
@@ -167,7 +170,7 @@ function drawEvent() {
     EVS.size = mine && mine.status === 'ORDERED' ? mine.sizeCode : null;
   }
   var showForm = open && (!mine || EVS.editing);
-  var h = '<div class="crumb"><a href="#/">' + ic('arrowl') + ' หน้าแรก</a></div>';
+  var h = '<div class="row between crumbrow"><div class="crumb"><a href="#/">' + ic('arrowl') + ' หน้าแรก</a></div>' + helpBtn() + '</div>';
   h += '<div class="evhero">' + (cfg.image ? '<div class="pic" id="evPic"><img src="' + esc(cfg.image) + '" alt="' + esc(cfg.itemName || ev.title) + '"><span class="zoom">' + ic('zoom') + ' ดูแบบเต็ม</span></div>' : '') +
     '<div class="info"><div class="row">' + evStatusChip(ev.status) + '<span class="chip">' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span></div>' +
     '<h1>' + esc(ev.title) + '</h1>' + (ev.subtitle ? '<div class="subt">' + esc(ev.subtitle) + '</div>' : '') + '<div class="desc">' + esc(ev.description || '') + '</div>' +

@@ -77,7 +77,7 @@ function drawOrderEvent(ev, data) {
   var cfg = ev.config || {}, open = ev.status === 'OPEN', live = OS.orders.filter(function (o) { return !o.cancelled; });
   setAccent(ev.color);
   if (!live.length && open) OS.showForm = true;
-  var h = '<div class="crumb"><a href="#/">' + ic('arrowl') + ' หน้าแรก</a></div>' + eventHeroHtml(ev);
+  var h = '<div class="row between crumbrow"><div class="crumb"><a href="#/">' + ic('arrowl') + ' หน้าแรก</a></div>' + helpBtn() + '</div>' + eventHeroHtml(ev);
   // คำสั่งซื้อของฉัน
   if (OS.orders.length) {
     h += '<div class="row between" style="margin:6px 0 12px"><h2 style="font-size:19px">คำสั่งซื้อของฉัน</h2>' + (open && !OS.showForm ? '<button class="btn primary" id="oNew">' + ic('plus') + 'สั่งซื้อเพิ่ม</button>' : '') + '</div>';

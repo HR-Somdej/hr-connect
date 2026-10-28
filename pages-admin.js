@@ -801,7 +801,7 @@ function settingsGeneral(d) {
     '<label class="switch"><input type="checkbox" data-st="maintenance" ' + (s.maintenance === 'TRUE' ? 'checked' : '') + '><span class="tr"></span>ปิดปรับปรุง (เฉพาะผู้ดูแลใช้งานได้)</label></div></div>' +
     '<div class="card pad"><h3 style="font-size:16px">ลิงก์สำหรับประชาสัมพันธ์</h3><p class="small muted">แชร์ในกลุ่มไลน์ หรือพิมพ์ QR ติดประกาศ</p><div class="row"><input class="input" readonly value="' + esc(s.webUrl) + '" style="flex:1"><button class="btn" id="cpUrl">' + ic('copy') + '</button></div>' +
     '<div style="margin-top:12px;text-align:center"><img alt="QR" style="width:180px;height:180px;border-radius:12px;border:1px solid var(--line)" src="https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=' + encodeURIComponent(s.webUrl) + '"><div class="small muted">คลิกขวา › บันทึกรูปภาพ</div></div></div>' +
-    '<div class="card pad small muted">โควตาอีเมลคงเหลือวันนี้: <b>' + (d.mailQuota == null ? '-' : nf(d.mailQuota)) + '</b> ฉบับ · หลังบ้าน build <b>' + esc(d.build) + '</b>' + (d.build !== HRC_BUILD ? ' <span class="chip warn">ไม่ตรงกับหน้าเว็บ ' + HRC_BUILD + ' — Deploy New version</span>' : ' <span class="chip ok">ตรงกับหน้าเว็บ</span>') + '</div></div></div>';
+    '<div class="card pad small muted">โควตาอีเมลคงเหลือวันนี้: <b>' + (d.mailQuota == null ? '-' : nf(d.mailQuota)) + '</b> ฉบับ · หลังบ้าน build <b>' + esc(d.build) + '</b>' + (d.build !== HRC_API_BUILD ? ' <span class="chip warn">หน้าเว็บรุ่นนี้ใช้คู่กับหลังบ้าน ' + HRC_API_BUILD + ' — Deploy New version</span>' : ' <span class="chip ok">ตรงกับหน้าเว็บ</span>') + '</div></div></div>';
   saveSettingsBtn($('#stBody'));
   $('#cpUrl').onclick = function () { copyText(s.webUrl, 'ลิงก์'); };
 }
@@ -874,7 +874,7 @@ ROUTES['admin/ev'] = function (params, q) {
       '<div class="row between" style="align-items:flex-start;margin-top:4px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="evicon">' + ic(ev.type === 'ORDER' ? 'shirt' : 'layers') + '</span><div><h1>' + esc(ev.title) + '</h1>' +
       '<div class="row small muted" style="gap:8px;margin-top:4px">' + evStatusChip(ev.status) + '<span class="chip">' + esc(TYPE_TH[ev.type] || ev.type) + '</span><span>' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.audience && ev.audience.mode === 'FILTER' ? '<span>' + ic('users') + ' เฉพาะกลุ่ม</span>' : '') + '</div></div></div>' +
       '<div class="row">' + (isAdmin() && (AD.events || []).length > 1 ? '<select class="input" id="wsSwitch" style="width:auto;min-height:38px">' + AD.events.map(function (e) { return '<option value="' + esc(e.id) + '" ' + (e.id === ev.id ? 'selected' : '') + '>' + esc(e.title) + '</option>'; }).join('') + '</select>' : '') +
-      '<a class="btn sm" href="#/event/' + esc(ev.id) + '">' + ic('eye') + 'มุมมองบุคลากร</a></div></div>' +
+      helpBtn() + '<a class="btn sm" href="#/event/' + esc(ev.id) + '">' + ic('eye') + 'มุมมองบุคลากร</a></div></div>' +
       '<div class="tabs" style="margin:14px 0 0;border:0">' + tabs.map(function (t) { return '<a href="#/admin/ev/' + esc(ev.id) + '/' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + ic(t[2]) + t[1] + '</a>'; }).join('') + '</div></div>';
     var sw = $('#wsSwitch'); if (sw) sw.onchange = function () { go('#/admin/ev/' + sw.value); };
     $('#page').classList.add('ws');

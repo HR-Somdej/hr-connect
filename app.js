@@ -1,6 +1,7 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-28.4';
+var HRC_BUILD = '2569-10-28.5';
+var HRC_API_BUILD = '2569-10-28.4';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -39,6 +40,8 @@ function mix(hex, a) { var n = parseInt(hex.slice(1), 16), f = function (x) { re
 
 /* =================================================================== ไอคอน (เส้น) */
 var ICONS = {
+  help: '<circle cx="12" cy="12" r="9.5"/><path d="M9.4 9.3a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.3-2.6 3.9"/><path d="M12 17.4h.01"/>',
+  book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v16H5.5A1.5 1.5 0 0 0 4 20.5z"/><path d="M4 20.5A1.5 1.5 0 0 0 5.5 22H20"/><path d="M8 7h8M8 11h6"/>',
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
   shirt: '<path d="M8 3 3.5 5.5 2 10l3.5 1.5V21h13v-9.5L22 10l-1.5-4.5L16 3c-.6 1.6-2.1 2.6-4 2.6S8.6 4.6 8 3Z"/>',
   chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
@@ -130,11 +133,16 @@ function api(action, payload, opt) {
     if (MEMO[k] && Date.now() - MEMO_T[k] < 15000) return Promise.resolve(MEMO[k]);
   }
   if (!isRead(action)) cacheClear();
+  // ผลของการ "อ่านข้อมูล" ที่กลับมาหลังผู้ใช้เปลี่ยนหน้าแล้ว → ทิ้ง (กันเขียนลงหน้าที่ไม่มีอยู่แล้ว)
+  var rid = S.rid, guard = isRead(action) && action !== 'bootstrap' && !opt.keep;
+  var stale = function () { return guard && rid !== S.rid; };
+  var never = function () { return new Promise(function () { }); };
   return rawCall(action, payload).then(function (res) {
+    if (stale()) return never();
     if (res.ok) { if (opt.fresh) { MEMO[k] = res.data; MEMO_T[k] = Date.now(); pcSet(k, res.data); } return res.data; }
     if (res.error === 'SESSION_EXPIRED') { expired(); var e = new Error('หมดเวลาการเข้าใช้งาน กรุณาเข้าสู่ระบบใหม่'); e.expired = true; throw e; }
     throw new Error(res.error || 'เกิดข้อผิดพลาด');
-  });
+  }, function (e) { if (stale()) return never(); throw e; });
 }
 
 /* =================================================================== UI กลาง: toast · modal · confirm · ปุ่มกำลังทำงาน */
@@ -150,7 +158,11 @@ function toast(msg, type, title) {
   el.querySelector('button').onclick = close;
   setTimeout(close, t === 'err' ? 7000 : 3800);
 }
-function errToast(e, title) { if (e && e.expired) return; toast(e && e.message ? e.message : String(e), 'err', title || 'ทำรายการไม่สำเร็จ'); }
+function errToast(e, title) {
+  if (e && e.expired) return;
+  // ข้อผิดพลาดภายในหน้าเว็บ (เช่น กล่องบนหน้าเดิมถูกปิดไปแล้ว) ไม่ใช่ความผิดของผู้ใช้ → บันทึกใน console ไม่แสดงป๊อปอัป
+  if (e instanceof TypeError || (e && /of null|null is not an object|undefined is not an object|Cannot read prop/.test(e.message || ''))) { console.warn('[HRC]', e); return; }
+  toast(e && e.message ? e.message : String(e), 'err', title || 'ทำรายการไม่สำเร็จ'); }
 
 function modal(o) {
   var ov = document.createElement('div');
@@ -270,10 +282,12 @@ function render() {
   }
   var fn = ROUTES[name];
   if (!fn) { name = 'home'; fn = ROUTES.home; params = []; }
+  S.rid = (S.rid || 0) + 1;
   S.route = name; S.inWs = false; S.wsTab = null;
   shell();
   $('#evbar').innerHTML = ''; $('#page').classList.remove('ws');
   window.scrollTo(0, 0);
+  if (window.mountHelp) mountHelp();
   try { fn(params, r.q); }
   catch (e) { console.error(e); $('#page').innerHTML = '<div class="empty">' + ic('alert') + '<p>' + esc(e.message) + '</p></div>'; }
 }
@@ -296,6 +310,7 @@ function navItems() {
     items.push({ k: 'admin/heads', href: '#/admin/heads', icon: 'building', label: 'หัวหน้าฝ่าย/หน่วย' });
     items.push({ k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่าระบบ' });
   }
+  items.push({ sec: 'ช่วยเหลือ' }, { k: 'manual', href: 'manual.html?v=' + HRC_BUILD + (isAdmin() ? '#admin' : isHead() ? '#head' : '#staff'), icon: 'book', label: 'คู่มือการใช้งาน', ext: true });
   return items;
 }
 function shell() {
@@ -303,16 +318,17 @@ function shell() {
   if (!app.querySelector('.main')) {
     app.innerHTML = '<aside class="side"><div class="brandbox"><img src="logo.jpg" alt=""><div><b>SOMDEJ HR Connect</b><small>ศูนย์รวมกิจกรรมบุคลากร</small></div></div><nav class="nav" id="nav"></nav>' +
       '<div class="me"><div class="avatar" id="meav"></div><div class="who"><b id="mename"></b><small id="mesub"></small></div><button class="iconbtn" id="btnout" title="ออกจากระบบ" aria-label="ออกจากระบบ">' + ic('logout') + '</button></div><div class="ver">v' + HRC_VERSION + ' · ' + HRC_BUILD + '</div></aside>' +
-      '<div class="main"><header class="topbar"><img src="logo.jpg" alt=""><div style="flex:1;min-width:0"><b>SOMDEJ HR Connect</b><small id="topsub"></small></div><button class="iconbtn" id="btnout2" aria-label="ออกจากระบบ">' + ic('logout') + '</button></header>' +
+      '<div class="main"><header class="topbar"><img src="logo.jpg" alt=""><div style="flex:1;min-width:0"><b>SOMDEJ HR Connect</b><small id="topsub"></small></div><button class="iconbtn" data-help aria-label="วิธีใช้หน้านี้">' + ic('help') + '</button><button class="iconbtn" id="btnout2" aria-label="ออกจากระบบ">' + ic('logout') + '</button></header>' +
       '<main class="content"><div id="annc"></div><div id="evbar"></div><div id="page"></div></main></div><nav class="bottomnav" id="bnav"></nav>';
     $('#btnout').onclick = $('#btnout2').onclick = askLogout;
+    app.addEventListener('click', function (e) { var t = e.target.closest && e.target.closest('[data-help]'); if (t) { e.preventDefault(); openHelp(); } });
   }
   var items = navItems();
   $('#nav').innerHTML = items.map(function (it) {
     if (it.sec) return '<div class="sec">' + esc(it.sec) + '</div>';
     var on = it.ev ? (S.route === 'admin/ev' && S.lastAdminEvent === it.ev.id) : S.route === it.k;
     if (it.ev) return '<a href="' + it.href + '" class="evnav ' + (on ? 'on' : '') + '" title="' + esc(it.label) + '"><span class="edot" style="background:' + esc(it.dot) + '"></span><span class="t">' + esc(it.label) + '</span>' + (it.ev.status === 'OPEN' ? '<span class="live"></span>' : '') + '</a>';
-    return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '">' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
+    return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '"' + (it.ext ? ' target="_blank" rel="noopener"' : '') + '>' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
   }).join('');
   var mob = [{ k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก' }];
   if (isAdmin()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' }, { k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อ' }, { k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่า' });
@@ -330,7 +346,9 @@ function shell() {
   $('#annc').innerHTML = a ? '<div class="announce">' + ic('info') + '<div>' + esc(a) + '</div></div>' : '';
 }
 function pageHead(title, sub, actions, crumb) {
-  return '<div class="pagehead"><div>' + (crumb ? '<div class="crumb">' + crumb + '</div>' : '') + '<h1>' + title + '</h1>' + (sub ? '<p>' + sub + '</p>' : '') + '</div><div class="row">' + (actions || '') + '</div></div>';
+  return '<div class="pagehead"><div>' + (crumb ? '<div class="crumb">' + crumb + '</div>' : '') + '<h1>' + title + '</h1>' + (sub ? '<p>' + sub + '</p>' : '') + '</div><div class="row">' + (S.inWs ? '' : helpBtn()) + (actions || '') + '</div></div>';
+}
+function helpBtn() { return '<button type="button" class="helpbtn" data-help title="วิธีใช้หน้านี้">' + ic('help') + '<span>วิธีใช้</span></button>';
 }
 
 /* =================================================================== ล็อกอิน / ออก */

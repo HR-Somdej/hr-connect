@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คู่มือ SOMDEJ HR Connect</title>
+<meta name="description" content="คู่มือการใช้งาน SOMDEJ HR Connect ฉบับเต็ม สำหรับบุคลากร หัวหน้าฝ่าย/หน่วย และผู้ดูแลระบบ (HR)">
+<meta name="theme-color" content="#8E4B9D">
+<link rel="icon" href="logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f4f8;--surface:#fff;--soft:#faf8fc;--ink:#221a2b;--ink2:#4a4055;--muted:#7d7489;--line:#ebe6f0;--accent:#8e4b9d;--accent2:#6b3478;--accentsoft:#f3eaf6;--red:#c8202e;--redsoft:#fdecee;--ok:#0f7a4f;--oksoft:#e7f6ee;--warn:#9a6200;--warnsoft:#fff6e3;--mark:#e11d48;
+--fh:'Anuphan','IBM Plex Sans Thai',system-ui,sans-serif;--fb:'IBM Plex Sans Thai',system-ui,sans-serif}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 var(--fb);-webkit-text-size-adjust:100%}
+a{color:var(--accent2)}
+img{max-width:100%;display:block}
+.top{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.top img{width:36px;height:36px;border-radius:10px}
+.top b{font-family:var(--fh);font-size:16px;line-height:1.1;display:block}
+.top small{color:var(--muted);font-size:12px}
+.top .sp{flex:1}
+.top a.btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;text-decoration:none;border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;white-space:nowrap}
+.hero{background:linear-gradient(135deg,#3a1d47,#8e4b9d 70%,#b45fa0);color:#fff}
+.hero .in{max-width:1180px;margin:0 auto;padding:44px 16px 40px}
+.hero h1{font-family:var(--fh);font-size:clamp(28px,5vw,42px);line-height:1.2;margin:0 0 10px}
+.hero p{margin:0;max-width:720px;opacity:.92}
+.tracks{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+.tracks a{display:block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:16px 18px;color:#fff;text-decoration:none}
+.tracks a:hover{background:rgba(255,255,255,.2)}
+.tracks b{font-family:var(--fh);font-size:19px;display:block}
+.tracks span{font-size:14px;opacity:.88}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 80px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px}
+nav.toc{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:14px;padding-right:6px}
+nav.toc h4{font-family:var(--fh);margin:16px 0 4px;font-size:13px;color:var(--muted);text-transform:none;letter-spacing:.02em}
+nav.toc a{display:block;padding:4px 10px;border-radius:8px;text-decoration:none;color:var(--ink2);line-height:1.45}
+nav.toc a:hover{background:var(--accentsoft);color:var(--accent2)}
+main{min-width:0}
+section.part{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:28px clamp(18px,3vw,36px);margin-bottom:26px}
+.ptag{display:inline-block;font-size:13px;font-weight:700;padding:3px 12px;border-radius:999px;background:var(--accentsoft);color:var(--accent2);margin-bottom:6px}
+.ptag.red{background:var(--redsoft);color:var(--red)}
+.ptag.green{background:var(--oksoft);color:var(--ok)}
+h2{font-family:var(--fh);font-size:clamp(23px,3.4vw,30px);line-height:1.3;margin:0 0 6px}
+h3{font-family:var(--fh);font-size:21px;line-height:1.35;margin:34px 0 8px;padding-top:18px;border-top:1px dashed var(--line)}
+h3:first-of-type{border-top:0;padding-top:0}
+h4{font-family:var(--fh);font-size:17px;margin:20px 0 6px}
+.lead{color:var(--ink2);margin:0 0 6px}
+.fig{display:grid;gap:22px;align-items:start;margin:16px 0 8px}
+.fig.ph{grid-template-columns:minmax(0,300px) minmax(0,1fr)}
+.fig.pc{grid-template-columns:1fr}
+.fig.two{grid-template-columns:repeat(2,minmax(0,300px));justify-content:start}
+.shot{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 8px 24px rgba(60,20,80,.08)}
+.shot img{width:100%;height:auto;cursor:zoom-in}
+.cap{font-size:13px;color:var(--muted);margin-top:6px;text-align:center}
+ol.steps,ol.legend{margin:0;padding:0;list-style:none;counter-reset:n}
+ol.steps li,ol.legend li{counter-increment:n;position:relative;padding:4px 0 8px 40px}
+ol.steps li::before{content:counter(n);position:absolute;left:0;top:4px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font:700 14px/28px var(--fb);text-align:center}
+ol.legend li::before{content:counter(n);position:absolute;left:0;top:4px;width:28px;height:28px;border-radius:50%;background:var(--mark);color:#fff;font:700 14px/28px var(--fb);text-align:center}
+.legend-h{font-size:13px;color:var(--mark);font-weight:700;margin:0 0 6px;display:flex;gap:6px;align-items:center}
+.legend-h::before{content:"";width:16px;height:12px;border:2.5px solid var(--mark);border-radius:4px}
+.note{border-radius:14px;padding:12px 16px;margin:14px 0;font-size:15px;border:1px solid}
+.note.tip{background:var(--accentsoft);border-color:#e4d3ea}
+.note.warn{background:var(--warnsoft);border-color:#f3dfae;color:#5e3e00}
+.note.ok{background:var(--oksoft);border-color:#bfe3cf}
+.note.red{background:var(--redsoft);border-color:#f3c2c4}
+.note b:first-child{display:block;margin-bottom:2px}
+kbd,.k{display:inline-block;padding:0 8px;border-radius:7px;background:#fff;border:1px solid var(--line);box-shadow:0 1px 0 var(--line);font:600 14px/1.7 var(--fb);color:var(--accent2);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--soft);font-size:13.5px;color:var(--muted)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.tw table{margin:0}
+.flow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;counter-reset:f;padding:0;list-style:none}
+.flow li{counter-increment:f;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;flex:1 1 150px}
+.flow li::before{content:counter(f) ". ";font-weight:700;color:var(--accent)}
+.faq details{border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin:10px 0;background:var(--soft)}
+.faq summary{cursor:pointer;font-weight:600}
+.faq details[open] summary{margin-bottom:6px}
+.contact{background:linear-gradient(135deg,#fff,var(--accentsoft));border:1px solid #e4d3ea;border-radius:18px;padding:18px 22px}
+#lb{position:fixed;inset:0;background:rgba(20,10,30,.86);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;cursor:zoom-out}
+#lb.on{display:flex}
+#lb img{max-width:100%;max-height:100%;border-radius:12px}
+.foot{text-align:center;color:var(--muted);font-size:13px;padding:10px 16px 40px}
+@media (max-width:960px){.wrap{grid-template-columns:1fr}nav.toc{position:static;max-height:none;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:6px 14px 12px}.tracks{grid-template-columns:1fr}}
+@media (max-width:720px){.fig.ph,.fig.two{grid-template-columns:1fr}.fig.ph .shot,.fig.two .shot{max-width:300px;margin:0 auto}.top small{display:none}body{font-size:15.5px}}
+@media print{.top,nav.toc,#lb{display:none!important}.wrap{display:block}section.part{break-inside:auto;border:0;padding:0}.fig{break-inside:avoid}body{background:#fff}.hero{background:#fff;color:#000}.tracks{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in"><img src="logo.jpg" alt=""><div><b>คู่มือ SOMDEJ HR Connect</b><small>ฝ่ายทรัพยากรบุคคล · รพ.สมเด็จพระบรมราชเทวี ณ ศรีราชา</small></div><span class="sp"></span><a class="btn" href="./">เข้าสู่ระบบ →</a></div></header>
+
+<div class="hero"><div class="in">
+  <h1>คู่มือการใช้งานฉบับเต็ม</h1>
+  <p>อธิบายทุกหน้าทีละขั้น พร้อมภาพประกอบ · <b>กรอบสีแดงและหมายเลข</b> ในภาพตรงกับคำอธิบายด้านข้าง · ในระบบทุกหน้ามีปุ่ม <span class="k" style="color:#6b3478">? วิธีใช้</span> สรุปสั้น ๆ ให้ด้วย</p>
+  <div class="tracks">
+    <a href="#staff"><b>สำหรับบุคลากร</b><span>เข้าสู่ระบบ · จองไซซ์เสื้อม่วง · สั่งซื้อเสื้อและชำระเงิน</span></a>
+    <a href="#head"><b>สำหรับหัวหน้าฝ่าย/หน่วย</b><span>ดูความคืบหน้าและรายชื่อในสังกัด · ส่งออก Excel · พิมพ์ใบเซ็นรับ</span></a>
+    <a href="#admin"><b>สำหรับผู้ดูแล (HR)</b><span>ติดตาม · บันทึกแทน · อีเมล · ตรวจสลิป · เงินสด · พิมพ์ · ตั้งค่า</span></a>
+  </div>
+</div></div>
+
+<div class="wrap">
+<nav class="toc" aria-label="สารบัญ">
+  <h4>บุคลากร</h4>
+  <a href="#staff-login">1. เข้าสู่ระบบ</a>
+  <a href="#staff-home">2. หน้าแรก</a>
+  <a href="#staff-choice">3. จองไซซ์เสื้อสีม่วง</a>
+  <a href="#staff-order">4. สั่งซื้อเสื้อ + ชำระเงิน</a>
+  <h4>หัวหน้าฝ่าย/หน่วย</h4>
+  <a href="#head">5. สิ่งที่หัวหน้าเห็นและทำได้</a>
+  <h4>ผู้ดูแล (HR)</h4>
+  <a href="#admin">6. ภาพรวมเมนูผู้ดูแล</a>
+  <a href="#admin-events">7. กิจกรรมทั้งหมด</a>
+  <a href="#admin-overview">8. ภาพรวม + สรุปส่งจัดซื้อ</a>
+  <a href="#admin-tracking">9. ติดตามรายบุคคล / บันทึกแทน</a>
+  <a href="#admin-reports">10. รายงาน</a>
+  <a href="#admin-mail">11. อีเมลติดตาม</a>
+  <a href="#admin-event-settings">12. ตั้งค่ากิจกรรม</a>
+  <a href="#admin-orders">13. คำสั่งซื้อ / ตรวจสลิป / เงินสด</a>
+  <a href="#admin-summary">14. สรุปสำหรับสั่งต่อ</a>
+  <a href="#admin-print">15. พิมพ์ / ใบเซ็นรับ</a>
+  <a href="#admin-roster">16. รายชื่อบุคลากร</a>
+  <a href="#admin-heads">17. หัวหน้าฝ่าย/หน่วย</a>
+  <a href="#admin-settings">18. ตั้งค่าระบบ</a>
+  <h4>อื่น ๆ</h4>
+  <a href="#workflow">19. ขั้นตอนงานตั้งแต่ต้นจนจบ</a>
+  <a href="#faq">20. ปัญหาที่พบบ่อย</a>
+</nav>
+
+<main>
+<!-- ===================================================== บุคลากร -->
+<section class="part" id="staff">
+  <span class="ptag">ส่วนที่ 1 · บุคลากรทุกคน</span>
+  <h2>สำหรับบุคลากร</h2>
+  <p class="lead">ใช้ได้ทั้งมือถือ แท็บเล็ต และคอมพิวเตอร์ เปิดลิงก์ในไลน์ได้เลย ไม่ต้องติดตั้งแอป</p>
+
+  <h3 id="staff-login">1. เข้าสู่ระบบ</h3>
+  <div class="fig ph">
+    <div><div class="shot"><img src="manual/s01_login.jpg" alt="หน้าเข้าสู่ระบบบนมือถือ" loading="lazy"></div><div class="cap">หน้าเข้าสู่ระบบ (มือถือ)</div></div>
+    <div>
+      <p class="legend-h">จุดในภาพ</p>
+      <ol class="legend">
+        <li><b>รหัสพนักงาน</b> ตัวเลขตามบัตรพนักงาน เช่น 5660101</li>
+        <li><b>เลขบัตรประชาชน 13 หลัก</b> ใช้เป็นรหัสผ่าน พิมพ์ติดกัน หรือวางเลขที่มีขีดก็ได้ ระบบตัดขีดออกให้ ด้านล่างมีตัวนับ <b>13/13 หลัก · ครบ</b></li>
+        <li><b>รูปตา</b> กดเพื่อดูเลขที่พิมพ์ (แสดงเป็นกลุ่ม x-xxxx-xxxxx-xx-x ให้ตรวจง่าย)</li>
+        <li><b>เข้าสู่ระบบ</b> ระบบตรวจกับฐานข้อมูลบุคลากรของโรงพยาบาลทันที</li>
+      </ol>
+      <div class="note ok"><b>ความปลอดภัย</b>ระบบ <b>ไม่บันทึกเลขบัตรประชาชน</b> ใช้ตรวจตัวตนครั้งเดียวแล้วทิ้ง · จดจำการเข้าระบบบนเครื่องนั้น 7 วัน (กดออกจากระบบได้ทุกเมื่อ)</div>
+    </div>
+  </div>
+  <div class="fig ph">
+    <div><div class="shot"><img src="manual/s02_login_err.jpg" alt="ข้อความเมื่อใส่เลขบัตรผิด" loading="lazy"></div><div class="cap">เมื่อใส่ข้อมูลไม่ตรง</div></div>
+    <div>
+      <h4>ถ้าเข้าไม่ได้</h4>
+      <ul>
+        <li>ข้อความสีแดงบอกจำนวนครั้งที่เหลือ · <b>ผิด 5 ครั้งติดกันระบบพัก 10 นาที</b></li>
+        <li>ถ้าขึ้นเตือน "เลขบัตรอาจพิมพ์ผิด" แปลว่าตัวเลขหลักสุดท้ายไม่ตรงสูตรของบัตรประชาชน ให้ตรวจอีกครั้ง</li>
+        <li>พนักงานใหม่ที่ยังไม่มีชื่อในรายการ ก็เข้าได้ ถ้าข้อมูลตรงกับระบบ HR</li>
+        <li>ถ้าขึ้นว่า "เชื่อมต่อระบบ HR ไม่ได้" ให้ลองใหม่ภายหลัง หรือแจ้ง HR ให้บันทึกแทน</li>
+      </ul>
+      <p>หน้าเข้าสู่ระบบมีลิงก์ <b>วิธีเข้าสู่ระบบ</b> และ <b>คู่มือการใช้งาน</b> (หน้านี้) อยู่ใต้ปุ่มเข้าสู่ระบบ</p>
+    </div>
+  </div>
+
+  <h3 id="staff-home">2. หน้าแรก / กิจกรรมของฉัน</h3>
+  <div class="fig ph">
+    <div><div class="shot"><img src="manual/s03_home.jpg" alt="หน้าแรก" loading="lazy"></div></div>
+    <div>
+      <p class="legend-h">จุดในภาพ</p>
+      <ol class="legend">
+        <li><b>การ์ดกิจกรรม</b> 1 ใบ = 1 กิจกรรม มีวันปิดรับ เวลาที่เหลือ และสถานะของคุณ (เช่น <span class="k">ยังไม่ได้บันทึก</span>) แตะปุ่ม <b>บันทึกเลย</b> หรือแตะที่การ์ดเพื่อเข้าไปทำรายการ</li>
+        <li><b>? วิธีใช้</b> มีทุกหน้า อธิบายหน้านั้นทีละขั้น และมีลิงก์มาที่คู่มือนี้</li>
+        <li><b>ออกจากระบบ</b> (บนคอมอยู่มุมซ้ายล่าง)</li>
+        <li>ปุ่ม <b>?</b> บนแถบด้านบน (มือถือ) ทำงานเหมือนข้อ 2</li>
+      </ol>
+      <div class="note tip"><b>หมายเหตุ</b>ถ้ามีกิจกรรมที่ยังไม่ได้ทำเพียงกิจกรรมเดียว ระบบอาจพาไปหน้ากิจกรรมนั้นทันทีหลังเข้าสู่ระบบ กด <b>← หน้าแรก</b> เพื่อกลับ · กิจกรรมสั่งซื้อบางรายการแสดงเฉพาะผู้ที่มีสิทธิ์</div>
+    </div>
+  </div>
+
+  <h3 id="staff-choice">3. จองไซซ์เสื้อสีม่วงเฉลิมพระเกียรติฯ (ไม่มีค่าใช้จ่าย)</h3>
+  <p>ใช้เวลาไม่ถึง 1 นาที · คนละ 1 ตัว · <b>เลือกแบบชายหรือหญิงได้ตามที่ถนัด</b> ไม่จำเป็นต้องตรงกับเพศ · แก้ไขได้จนถึงวันปิดรับ</p>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s04_event_top.jpg" alt="รายละเอียดกิจกรรม" loading="lazy"></div><div class="cap">① ดูแบบเต็ม ② เวลาที่เหลือก่อนปิดรับ</div></div>
+    <div><div class="shot"><img src="manual/s05_option.jpg" alt="เลือกแบบ" loading="lazy"></div><div class="cap">ขั้นที่ 1 เลือกแบบชาย / แบบหญิง</div></div>
+  </div>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s06_size.jpg" alt="เลือกไซซ์" loading="lazy"></div><div class="cap">ขั้นที่ 2 เลือกไซซ์ ① · ไม่แน่ใจใส่รอบอก ②</div></div>
+    <div><div class="shot"><img src="manual/s07_actionbar.jpg" alt="ปุ่มยืนยัน" loading="lazy"></div><div class="cap">① ยืนยันส่ง HR ② ไม่ประสงค์รับเสื้อ</div></div>
+  </div>
+  <ol class="steps">
+    <li>อ่านรายละเอียดด้านบน กด <b>ดูแบบเต็ม</b> เพื่อขยายรูปเสื้อ (ด้านหน้า/หลัง/ข้าง)</li>
+    <li><b>เลือกแบบ</b>: แบบชาย (S–8XL) หรือแบบหญิง (S–3XL)</li>
+    <li><b>เลือกไซซ์</b>: ตัวเลขใต้ไซซ์คือขนาดของ <b>ตัวเสื้อ</b> เป็นนิ้ว เช่น "อก 40″ · ยาว 26″" (คลาดเคลื่อนได้ไม่เกิน ±1 นิ้ว) ถ้าไม่แน่ใจ ใส่ <b>รอบอกของคุณ</b> ในช่อง "ไม่แน่ใจไซซ์?" ระบบแนะนำไซซ์ที่หลวมกว่ารอบอกประมาณ 2 นิ้ว (ขึ้นป้าย <span class="k">แนะนำ</span>) · กด <b>ตารางไซซ์ทั้งหมด</b> เพื่อดูตารางเต็ม</li>
+    <li>แถบสีเข้มด้านล่างแสดงสิ่งที่เลือก กด <b>ยืนยันส่ง HR</b></li>
+    <li>ตรวจในหน้าต่างสรุปแล้วกด <b>ยืนยันส่ง HR</b> อีกครั้ง (กด <b>กลับไปแก้</b> ถ้ายังไม่ถูก)</li>
+  </ol>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s08_confirm.jpg" alt="หน้าต่างยืนยัน" loading="lazy"></div><div class="cap">หน้าต่างยืนยัน</div></div>
+    <div><div class="shot"><img src="manual/s09_success.jpg" alt="ส่งถึง HR เรียบร้อย" loading="lazy"></div><div class="cap">ส่งถึง HR เรียบร้อย</div></div>
+  </div>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s10_after.jpg" alt="สถานะหลังบันทึก" loading="lazy"></div><div class="cap">① สิ่งที่บันทึกไว้ ② ปุ่มแก้ไข</div></div>
+    <div><div class="shot"><img src="manual/s11_home_after.jpg" alt="หน้าแรกหลังบันทึก" loading="lazy"></div><div class="cap">① หน้าแรกแสดงไซซ์ที่จองไว้</div></div>
+  </div>
+  <div class="note tip"><b>เปลี่ยนใจ / เลือกผิด</b>เข้าระบบอีกครั้ง → แตะกิจกรรม → กด <b>แก้ไข</b> → เลือกใหม่ → ยืนยัน (ทำได้จนถึงวันปิดรับ หลังปิดรับติดต่อ HR)</div>
+  <div class="note warn"><b>ไม่ต้องการเสื้อ</b>กด <b>ไม่ประสงค์รับเสื้อ</b> ใต้แถบยืนยัน เพื่อให้ HR รู้ว่าคุณตอบแล้ว จะได้ไม่ถูกติดตามซ้ำ</div>
+  <p>ถ้ามีอีเมลในระบบ HR จะได้อีเมลยืนยันไซซ์ด้วย</p>
+
+  <h3 id="staff-order">4. สั่งซื้อเสื้อที่ระลึก + ชำระเงิน</h3>
+  <p>ใช้กับกิจกรรมที่มีค่าใช้จ่าย เช่น <b>เสื้อที่ระลึกงานกาชาด ประจำปี 2569</b> (เฉพาะรายชื่อที่ HR กำหนด)</p>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s12_order_form.jpg" alt="เลือกไซซ์และจำนวน" loading="lazy"></div><div class="cap">① ปุ่ม + / − ② ยืนยันคำสั่งซื้อ</div></div>
+    <div><div class="shot"><img src="manual/s13_order_confirm.jpg" alt="ยืนยันคำสั่งซื้อ" loading="lazy"></div><div class="cap">ตรวจรายการ → ยืนยัน · ไปชำระเงิน</div></div>
+  </div>
+  <ol class="steps">
+    <li>ดูรูปและตารางไซซ์/ราคา แล้วกด <b>+</b> ที่ไซซ์ที่ต้องการ (เลือกได้หลายไซซ์ หลายตัว ในคำสั่งซื้อเดียว) ยอดรวมขึ้นที่แถบด้านล่าง</li>
+    <li>กด <b>ยืนยันคำสั่งซื้อ</b> → ตรวจรายการ → <b>ยืนยัน · ไปชำระเงิน</b> ระบบออกเลขที่คำสั่งซื้อ เช่น <b>RC69-0029</b></li>
+    <li>หน้าต่างชำระเงินแสดง <b>QR พร้อมเพย์ที่ใส่ยอดเงินให้แล้ว</b></li>
+  </ol>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s14_pay.jpg" alt="QR พร้อมเพย์" loading="lazy"></div><div class="cap">① QR ใส่ยอดแล้ว ② บันทึกรูป QR ③ คัดลอกเลขพร้อมเพย์</div></div>
+    <div><div class="shot"><img src="manual/s15_slip.jpg" alt="แนบสลิป" loading="lazy"></div><div class="cap">① ระบบอ่าน QR บนสลิปได้ ② ส่งสลิปให้ HR ตรวจ</div></div>
+  </div>
+  <ol class="steps" start="4" style="counter-reset:n 3">
+    <li><b>วิธีโอนบนมือถือเครื่องเดียว</b>: กด <b>บันทึกรูป QR</b> → เปิดแอปธนาคาร → สแกน → <b>เลือกรูปจากอัลบั้ม</b> → ยอดเงินขึ้นให้เอง · หรือกด <b>คัดลอกเลขพร้อมเพย์</b> แล้วกรอกยอดเอง</li>
+    <li><b>ตรวจชื่อบัญชีผู้รับ</b> และยอดเงินให้ตรงกับที่แสดง แล้วโอน</li>
+    <li>แตะกล่อง <b>แตะเพื่อเลือกรูปสลิป</b> เลือกสลิปจากอัลบั้ม ระบบย่อรูปและอ่าน QR บนสลิป (ขึ้น <span class="k">อ่าน QR บนสลิปได้</span>)</li>
+    <li>กด <b>ส่งสลิปให้ HR ตรวจ</b> (ถ้ายังไม่โอน กด <b>ไว้ภายหลัง</b> แล้วกลับมาแนบได้)</li>
+  </ol>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/s16_sent.jpg" alt="ส่งสลิปเรียบร้อย" loading="lazy"></div><div class="cap">ส่งสลิปเรียบร้อย</div></div>
+    <div><div class="shot"><img src="manual/s17_order_status.jpg" alt="สถานะคำสั่งซื้อ" loading="lazy"></div><div class="cap">คำสั่งซื้อของฉัน + แถบสถานะ</div></div>
+  </div>
+  <h4>สถานะคำสั่งซื้อ</h4>
+  <div class="tw"><table>
+    <tr><th>สถานะ</th><th>ความหมาย / สิ่งที่ต้องทำ</th></tr>
+    <tr><td>รอชำระเงิน</td><td>ยังไม่แนบสลิป · แก้ไขหรือยกเลิกคำสั่งซื้อเองได้</td></tr>
+    <tr><td>รอตรวจสลิป</td><td>HR กำลังตรวจ ไม่ต้องทำอะไร</td></tr>
+    <tr><td>สลิปไม่ถูกต้อง</td><td>HR ตีกลับพร้อมเหตุผล (เช่น ยอดไม่ตรง) · แนบสลิปใหม่ได้</td></tr>
+    <tr><td>ชำระแล้ว</td><td>ยืนยันการชำระแล้ว (โอน หรือเงินสด) · ถ้าต้องแก้ไขติดต่อ HR</td></tr>
+    <tr><td>กำลังจัดเตรียมคำสั่งซื้อ → สั่งซื้อแล้ว รอจัดส่ง → ส่งแล้ว รอรับ → รับแล้ว</td><td>ความคืบหน้าของสินค้า แจ้งทางระบบและอีเมล</td></tr>
+  </table></div>
+  <div class="note tip"><b>ข้อควรรู้</b>สั่งเพิ่มได้ด้วยปุ่ม <b>สั่งซื้อเพิ่ม</b> · <b>จ่ายเงินสด</b> ได้ที่ฝ่ายทรัพยากรบุคคล (เจ้าหน้าที่บันทึกในระบบให้ ไม่ต้องแนบสลิป) · สลิปของคุณเห็นได้เฉพาะคุณและผู้ดูแลระบบ · ระบบกันการใช้สลิปเดิมซ้ำ</div>
+  <div class="fig ph">
+    <div><div class="shot"><img src="manual/s18_help.jpg" alt="หน้าต่างวิธีใช้" loading="lazy"></div><div class="cap">ตัวอย่างหน้าต่าง "วิธีใช้"</div></div>
+    <div><h4>ปุ่ม "? วิธีใช้" ในทุกหน้า</h4><p>กดเมื่อไม่แน่ใจ ระบบสรุปขั้นตอนของหน้านั้นทีละข้อ พร้อมเคล็ดลับ และปุ่ม <b>คู่มือฉบับเต็ม</b> ที่เปิดมาหัวข้อที่ตรงกันในคู่มือนี้</p></div>
+  </div>
+</section>
+
+<!-- ===================================================== หัวหน้า -->
+<section class="part" id="head">
+  <span class="ptag green">ส่วนที่ 2 · หัวหน้าฝ่าย/หน่วย</span>
+  <h2>สำหรับหัวหน้าฝ่าย/หน่วย</h2>
+  <p class="lead">เข้าระบบด้วยรหัสพนักงาน + เลขบัตรประชาชนเหมือนบุคลากรทั่วไป ถ้า HR ตั้งให้เป็นหัวหน้า จะเห็นเมนู <b>กิจกรรม (หัวหน้า)</b> เพิ่มทางซ้าย</p>
+  <div class="fig pc"><div><div class="shot"><img src="manual/h01_overview.jpg" alt="ภาพรวมของหัวหน้า" loading="lazy"></div><div class="cap">① เมนูกิจกรรมของหัวหน้า ② แท็บ ภาพรวม / ติดตามรายบุคคล / รายงาน / พิมพ์</div></div></div>
+  <ul>
+    <li>เห็น <b>เฉพาะบุคลากรในฝ่ายหรือหน่วยที่ดูแล</b> (มีแถบสีฟ้าบอกขอบเขต) และ <b>ดูได้อย่างเดียว</b> แก้คำตอบแทนไม่ได้</li>
+    <li><b>ภาพรวม</b>: เปอร์เซ็นต์ตอบแล้ว จำนวนไซซ์ ความคืบหน้ารายหน่วย</li>
+    <li><b>ติดตามรายบุคคล</b>: แตะ <span class="k">ยังไม่ตอบ</span> เพื่อดูคนที่ยังไม่บันทึก แล้วช่วยแจ้งในหน่วย · <b>ส่งออกที่กรอง</b> เป็น Excel (หัวหน้าไม่เห็นเบอร์โทร)</li>
+    <li><b>รายงาน</b> และ <b>พิมพ์ / ใบเซ็นรับ</b>: ใช้ตอนแจกเสื้อในหน่วย (ดูข้อ 15)</li>
+    <li>ถ้า HR ใส่อีเมลไว้ จะได้รับ <b>อีเมลสรุปรายชื่อผู้ยังไม่ตอบ</b> ตามรอบที่ HR ตั้ง</li>
+  </ul>
+  <div class="fig pc"><div><div class="shot"><img src="manual/h02_tracking.jpg" alt="ติดตามรายบุคคลของหัวหน้า" loading="lazy"></div><div class="cap">① แท็บสถานะ ② ส่งออก Excel</div></div></div>
+</section>
+
+<!-- ===================================================== ผู้ดูแล -->
+<section class="part" id="admin">
+  <span class="ptag red">ส่วนที่ 3 · ผู้ดูแลระบบ (HR)</span>
+  <h2>สำหรับผู้ดูแล (HR)</h2>
+  <p class="lead">ผู้ดูแลเห็นเมนูครบ: แต่ละกิจกรรมมี <b>พื้นที่ทำงานของตัวเอง</b> (แถบหัวสีประจำกิจกรรม + แท็บ) จึงไม่ปนกัน และมีเมนูระบบ (รายชื่อ หัวหน้า ตั้งค่า)</p>
+  <div class="tw"><table>
+    <tr><th>เมนูซ้าย</th><th>ใช้ทำอะไร</th></tr>
+    <tr><td>หน้าแรก / กิจกรรมของฉัน</td><td>มุมมองแบบบุคลากร (ผู้ดูแลก็จองเสื้อของตัวเองได้ที่นี่)</td></tr>
+    <tr><td>กิจกรรม (จุดสี)</td><td>เข้าพื้นที่ทำงานของกิจกรรมนั้นทันที · จุดเขียวกะพริบ = กำลังเปิดรับ</td></tr>
+    <tr><td>จัดการกิจกรรมทั้งหมด</td><td>ดูทุกกิจกรรม สร้างกิจกรรมใหม่</td></tr>
+    <tr><td>รายชื่อบุคลากร · หัวหน้าฝ่าย/หน่วย · ตั้งค่าระบบ</td><td>ข้อมูลกลางที่ใช้ร่วมกันทุกกิจกรรม</td></tr>
+    <tr><td>คู่มือการใช้งาน</td><td>เปิดหน้านี้</td></tr>
+  </table></div>
+  <div class="note tip"><b>บทบาท</b><b>ผู้ดูแลสูงสุด</b> (เช่น 5660101) เพิ่ม/ถอดผู้ดูแลได้ · <b>ผู้ดูแล</b> ทำได้ทุกอย่างยกเว้นจัดการผู้ดูแล · เห็นเบอร์โทรและสลิป · <b>หัวหน้า</b> ดูอย่างเดียวในสังกัด · <b>บุคลากร</b> เห็นเฉพาะของตัวเอง</div>
+
+  <h3 id="admin-events">7. จัดการกิจกรรมทั้งหมด</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a01_events.jpg" alt="หน้ากิจกรรมทั้งหมด" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>เมนูกิจกรรม</b> ทางซ้าย คลิกเข้าพื้นที่ทำงานได้เลย</li>
+    <li><b>สร้างกิจกรรม</b>: เลือกชนิด <b>เลือกตัวเลือก / จองไซซ์ (ไม่เก็บเงิน)</b> หรือ <b>สั่งซื้อ + ชำระเงิน</b> แล้วกรอกตามข้อ 12</li>
+    <li><b>ตั้งค่า</b> / <b>เข้าทำงาน</b> ของแต่ละกิจกรรม</li>
+  </ol>
+
+  <h3 id="admin-overview">8. ภาพรวม + สรุปส่งจัดซื้อ (กิจกรรมจองไซซ์)</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a02_overview.jpg" alt="ภาพรวมกิจกรรม" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>แท็บของกิจกรรม</b>: ภาพรวม · ติดตามรายบุคคล · รายงาน · พิมพ์ / ใบเซ็นรับ · อีเมลติดตาม · ตั้งค่ากิจกรรม</li>
+    <li><b>สลับกิจกรรม</b> จากกล่องเลือกนี้ได้โดยไม่ต้องกลับไปเมนู</li>
+    <li><b>? วิธีใช้</b> ของแท็บที่เปิดอยู่ · ข้าง ๆ มีปุ่ม <b>มุมมองบุคลากร</b> เพื่อดูหน้าที่บุคลากรเห็นจริง</li>
+  </ol>
+  <p>การ์ดด้านบน: <b>ความคืบหน้า % · จองแล้ว · ไม่ประสงค์ · ยังไม่ตอบ (คลิกเพื่อไปดูรายชื่อ) · เป้าหมาย</b> · ด้านล่างมี <b>จำนวนตามไซซ์</b> แยกแบบชาย/หญิง และ <b>ความคืบหน้ารายฝ่าย</b> · ปุ่ม <b>ส่งออก Excel</b> ได้ไฟล์สรุปทั้งหมด</p>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a03_purchase.jpg" alt="สรุปส่งจัดซื้อ" loading="lazy"></div><div class="cap">สรุปส่งจัดซื้อ เรียงช่องตามแบบฟอร์ม MS Forms ของงานจัดซื้อ</div></div></div>
+  <div class="note ok"><b>กรอก MS Forms ของงานจัดซื้อ (ส่งภายใน 15 พ.ย. 2569)</b>เปิดฟอร์มจัดซื้อคู่กับหน้านี้ · ในกล่อง <b>สรุปส่งจัดซื้อ</b> คลิกที่ตัวเลขช่องใด = คัดลอกตัวเลขนั้น แล้ววางลงช่องเดียวกันในฟอร์ม ทำทีละช่องตามลำดับ (หน่วยงาน · Size S ชาย … · ผู้ประสานงาน) หรือกด ① <b>คัดลอกทั้งชุด</b> เพื่อเก็บไว้ในอีเมล/ไลน์</div>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a04_divprog.jpg" alt="ความคืบหน้ารายฝ่าย" loading="lazy"></div><div class="cap">ความคืบหน้ารายฝ่าย + การตอบรายวัน + รายการล่าสุด</div></div></div>
+
+  <h3 id="admin-tracking">9. ติดตามรายบุคคล / บันทึกแทน</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a05_tracking.jpg" alt="ติดตามรายบุคคล" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>ค้นหา</b> รหัส/ชื่อ/ตำแหน่ง/หน่วย และกล่องกรอง <b>ฝ่าย · หน่วย · ตำแหน่ง · กลุ่มบุคลากร</b></li>
+    <li><b>แท็บสถานะ</b>: ทั้งหมด · ยังไม่ตอบ · จองแล้ว · ไม่ประสงค์ (มีตัวเลขกำกับ)</li>
+    <li><b>คัดลอกเบอร์ผู้ยังไม่ตอบ</b>: ได้รายชื่อ + เบอร์ตามตัวกรอง วางในไลน์/โน้ตเพื่อโทรตามได้ทันที</li>
+    <li><b>อีเมลเตือนผู้ยังไม่ตอบ</b>: ส่งเฉพาะคนในตัวกรองปัจจุบันที่มีอีเมล (ระบบบอกจำนวนก่อนยืนยัน)</li>
+    <li><b>บันทึกแทน / แก้แทน</b> รายคน · ปุ่มนาฬิกาข้าง ๆ = ประวัติการเปลี่ยนแปลงของคนนั้น</li>
+  </ol>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a06_proxy.jpg" alt="บันทึกแทน" loading="lazy"></div><div class="cap">หน้าต่างบันทึกแทน: เลือกแบบ ไซซ์ หรือ "ไม่ประสงค์รับ" ใส่หมายเหตุ เช่น "แจ้งทางโทรศัพท์"</div></div></div>
+  <ul>
+    <li>ใช้เมื่อบุคลากรแจ้งไซซ์ทางโทรศัพท์/กระดาษ เข้าระบบไม่ได้ หรือแจ้งเปลี่ยนหลังปิดรับ</li>
+    <li>ผู้ดูแลแก้แทนได้แม้หลังปิดรับ ระบบเก็บว่าใครแก้ เมื่อไร เปลี่ยนจากอะไรเป็นอะไร</li>
+    <li><b>ล้างคำตอบ</b> ทำให้คนนั้นกลับเป็น "ยังไม่ตอบ"</li>
+    <li><b>ส่งออกที่กรอง</b> ได้ Excel ตามตัวกรองปัจจุบัน เช่น รายชื่อผู้ยังไม่ตอบของฝ่ายการพยาบาล</li>
+  </ul>
+  <div class="fig two"><div><div class="shot"><img src="manual/m02_tracking.jpg" alt="ติดตามบนมือถือ" loading="lazy"></div><div class="cap">ใช้งานบนมือถือได้ทุกหน้า</div></div></div>
+
+  <h3 id="admin-reports">10. รายงาน</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a07_reports.jpg" alt="รายงาน" loading="lazy"></div><div class="cap">① ส่งออก Excel (ทุกแผ่น)</div></div></div>
+  <p>เลือกมุมมอง <b>รายฝ่าย / รายหน่วย / รายตำแหน่ง / รายกลุ่มบุคลากร</b> แต่ละแถวมี เป้าหมาย · ตอบแล้ว · ไม่ประสงค์ · ยังไม่ตอบ · % และจำนวนแต่ละไซซ์ · คลิกตัวเลข "ยังไม่ตอบ" เพื่อไปดูรายชื่อของกลุ่มนั้น · ไฟล์ Excel มีแผ่นงาน <b>สรุปส่งจัดซื้อ · สรุปรายฝ่าย · สรุปรายหน่วย · สรุปรายตำแหน่ง · รายชื่อทั้งหมด · ยังไม่ตอบ</b></p>
+
+  <h3 id="admin-mail">11. อีเมลติดตาม</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a12_mail.jpg" alt="อีเมลติดตาม" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>ดูตัวอย่าง</b> หน้าตาอีเมลจริงก่อนส่ง</li>
+    <li><b>ส่งทดสอบ</b> เข้าอีเมลของคุณเอง</li>
+    <li><b>ส่งตอนนี้</b> ระบบบอกจำนวนผู้รับก่อนให้ยืนยัน</li>
+    <li><b>บันทึกการตั้งค่า</b> รอบส่งอัตโนมัติ</li>
+  </ol>
+  <div class="tw"><table>
+    <tr><th>อีเมล</th><th>ส่งถึง</th><th>ส่งเมื่อ</th></tr>
+    <tr><td>ยืนยันการบันทึก</td><td>บุคลากรที่กดยืนยัน</td><td>อัตโนมัติทันที (เปิด/ปิดได้)</td></tr>
+    <tr><td>เตือนบุคลากรที่ยังไม่ตอบ</td><td>คนที่ยังไม่ตอบและมีอีเมล</td><td>กดส่งเอง หรือตามรอบ</td></tr>
+    <tr><td>สรุปถึงหัวหน้าฝ่าย/หน่วย</td><td>หัวหน้าที่มีอีเมล (ความคืบหน้า + รายชื่อผู้ยังไม่ตอบในสังกัด)</td><td>กดส่งเอง หรือตามรอบ</td></tr>
+    <tr><td>สรุปภาพรวมถึงผู้ดูแล</td><td>ผู้ดูแลที่ใส่อีเมลไว้</td><td>กดส่งเอง หรือตามรอบ</td></tr>
+  </table></div>
+  <p><b>รอบส่งอัตโนมัติ</b>: เปิดสวิตช์ของอีเมลที่ต้องการ เลือกวันในสัปดาห์ เวลา และ "ส่งเพิ่มก่อนปิด N วัน" แล้วกด <b>บันทึกการตั้งค่า</b> · ด้านล่างมี <b>บันทึกการส่ง</b> ของกิจกรรมนี้</p>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a13_mail_preview.jpg" alt="ตัวอย่างอีเมล" loading="lazy"></div><div class="cap">ตัวอย่างอีเมลเตือน (การ์ดสีประจำกิจกรรม + ลายเซ็นฝ่ายทรัพยากรบุคคล)</div></div></div>
+  <div class="note warn"><b>ข้อจำกัด</b>ส่งได้ราว 1,500 ฉบับ/วัน (ดูคงเหลือที่ ตั้งค่าระบบ) · บุคลากรที่ไม่มีอีเมลในระบบ HR จะไม่ได้รับ ให้ใช้ "คัดลอกเบอร์ผู้ยังไม่ตอบ" หรือแจ้งผ่านหัวหน้า/ไลน์แทน</div>
+
+  <h3 id="admin-event-settings">12. ตั้งค่ากิจกรรม (ขยายเวลา · แก้ไซซ์ · ผู้มีสิทธิ์)</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a14_evsettings.jpg" alt="ตั้งค่ากิจกรรม" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>ปิดรับ</b>: ขยายเวลาได้ตลอด แล้วกดบันทึก</li>
+    <li><b>เผยแพร่ (บุคลากรมองเห็น)</b>: ปิดเพื่อซ่อนกิจกรรมชั่วคราว</li>
+    <li><b>ผู้มีสิทธิ์เข้าร่วม</b>: บุคลากรทุกคน หรือเฉพาะกลุ่ม (ฝ่าย · กลุ่มบุคลากร · ตำแหน่ง · รหัสพนักงาน)</li>
+  </ol>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a15_evsizes.jpg" alt="แบบและไซซ์" loading="lazy"></div><div class="cap">① เพิ่มแบบ · แต่ละไซซ์แก้ รอบอก/ความยาว/หมายเหตุ เลื่อนลำดับ ซ่อน หรือลบได้</div></div></div>
+  <ul>
+    <li>ด้านบนมีชื่อ คำอธิบาย ชนิด สีประจำกิจกรรม และ <b>รูปปก</b> (มีตัวอย่าง + บอกขนาดภาพ/เตือนถ้าภาพเล็ก)</li>
+    <li><b>เปลี่ยนรูปเสื้อ</b>: อัปโหลดรูปขึ้น GitHub ในโฟลเดอร์เดียวกับหน้าเว็บ แล้วพิมพ์ชื่อไฟล์ เช่น <code>shirt-purple.jpg</code> (หรือวางลิงก์รูปภาพสาธารณะ) → บันทึก</li>
+    <li>ไซซ์ที่มีคนเลือกแล้ว <b>ลบไม่ได้</b> (กันข้อมูลหาย) ให้ใช้ "ซ่อน" แทน</li>
+    <li>กิจกรรมสั่งซื้อมีเพิ่ม: <b>ราคาต่อไซซ์ · พร้อมเพย์ · ชื่อบัญชีผู้รับ · คำนำหน้าเลขที่ · ค่าส่ง EMS (เปิด/ปิด)</b></li>
+    <li>กด <b>บันทึก</b> มุมขวาบนทุกครั้ง</li>
+  </ul>
+
+  <h3 id="admin-orders">13. คำสั่งซื้อ / ตรวจสลิป / รับเงินสด</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a16_orders.jpg" alt="คำสั่งซื้อ" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>การ์ดสรุป</b>: คำสั่งซื้อ · ชำระแล้ว (แยกโอน/เงินสด) · <b>รอตรวจสลิป</b> (คลิกเพื่อกรอง) · รอชำระ · ยอดรวม</li>
+    <li><b>แท็บกรอง</b>: ทั้งหมด · รอตรวจสลิป · รอชำระ · ตีกลับ · ชำระแล้ว · ยกเลิก</li>
+    <li><b>รายชื่อที่อนุญาต</b>: กำหนดว่าใครสั่งได้</li>
+    <li><b>สร้างแทน</b>: สั่งให้คนที่แจ้งทางอื่น</li>
+    <li>ปุ่มในแต่ละแถว: <b>ตรวจสลิป / ยืนยันชำระ</b> · <b>เงินสด</b> · แก้ไข · ประวัติ</li>
+  </ol>
+  <h4>ตรวจสลิป</h4>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a17_review.jpg" alt="ตรวจสลิป" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>สลิป</b> (คลิกเพื่อขยาย) ด้านขวาแสดง <b>ยอดที่ต้องตรง</b> และผลอ่าน QR บนสลิป</li>
+    <li><b>ยืนยันชำระ</b> เมื่อตรวจ 3 อย่างตรงกัน: <b>ยอดเงิน · ชื่อผู้รับ/พร้อมเพย์ · วันที่หลังสั่งซื้อ</b></li>
+    <li><b>ตีกลับ</b> พร้อมเหตุผล (เช่น "ยอดไม่ตรง ขาด 150 บาท") ผู้สั่งเห็นเหตุผลและแนบใหม่ได้</li>
+    <li><b>รับเงินสดแทน</b> ถ้าผู้สั่งมาจ่ายสดแทนการโอน</li>
+  </ol>
+  <p>หลังกดยืนยัน/ตีกลับ ระบบ <b>เปิดรายการถัดไปที่รอตรวจให้อัตโนมัติ</b> และส่งอีเมลแจ้งผู้สั่ง (ถ้ามีอีเมล)</p>
+  <div class="note warn"><b>ระบบช่วยได้แค่ไหน</b>QR บนสลิปมีเพียงเลขอ้างอิงธุรกรรม ระบบจึงใช้ <b>กันสลิปซ้ำ</b> ได้ แต่ <b>ไม่ได้ยืนยันยอดเงินกับธนาคาร</b> · ผู้ดูแลต้องดูยอด ผู้รับ และวันเวลาด้วยตาทุกครั้ง (หรือเทียบกับรายการเงินเข้าในแอปธนาคาร)</div>
+  <h4>รับเงินสด</h4>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a18_cash.jpg" alt="รับเงินสด" loading="lazy"></div><div class="cap">① เลขใบเสร็จ/หมายเหตุ (ถ้ามี) ② ยืนยันรับเงินสด</div></div></div>
+  <ul>
+    <li>กด <b>เงินสด</b> ในแถวคำสั่งซื้อ → ตรวจยอด → ใส่เลขใบเสร็จ → <b>ยืนยันรับเงินสด</b> สถานะเป็น <span class="k">ชำระแล้ว · เงินสด</span></li>
+    <li>คนที่จ่ายสดแต่ยังไม่ได้สั่งในระบบ: <b>สร้างแทน</b> → ใส่รหัสพนักงาน + จำนวนแต่ละไซซ์ → ติ๊ก <b>รับเงินสดแล้ว</b> → บันทึก (จบในขั้นตอนเดียว)</li>
+  </ul>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a19_create.jpg" alt="สร้างคำสั่งซื้อแทน" loading="lazy"></div><div class="cap">สร้างคำสั่งซื้อแทน · สวิตช์ "รับเงินสดแล้ว" อยู่ด้านล่าง</div></div></div>
+  <h4>เปลี่ยนสถานะจัดส่งทีละหลายรายการ</h4>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a20_bulk.jpg" alt="เปลี่ยนสถานะหลายรายการ" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li>แท็บ <b>ชำระแล้ว</b> → ติ๊กเลือก (ช่องบนสุด = เลือกทั้งหมด)</li>
+    <li>เลือกสถานะใหม่: กำลังจัดเตรียมคำสั่งซื้อ · สั่งซื้อแล้ว รอจัดส่ง · ส่งแล้ว รอรับ · รับแล้ว (เลือกได้ว่าจะแจ้งอีเมลหรือไม่)</li>
+    <li>กด <b>บันทึก</b></li>
+  </ol>
+  <h4>รายชื่อที่อนุญาตให้สั่ง</h4>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a21_allow.jpg" alt="รายชื่อที่อนุญาต" loading="lazy"></div><div class="cap">วางรหัสพนักงานจาก Excel ได้เลย (คั่นด้วยบรรทัดหรือจุลภาค)</div></div></div>
+  <div class="fig two"><div><div class="shot"><img src="manual/m01_orders.jpg" alt="คำสั่งซื้อบนมือถือ" loading="lazy"></div><div class="cap">ตรวจสลิปจากมือถือได้</div></div></div>
+
+  <h3 id="admin-summary">14. สรุปสำหรับสั่งต่อ</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a22_summary.jpg" alt="สรุปสำหรับสั่งต่อ" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li>เลือกนับ <b>ทุกคำสั่งซื้อ (ไม่รวมยกเลิก)</b> หรือ <b>เฉพาะชำระแล้ว</b> (ใช้ยอดนี้ตอนสั่งของจริง)</li>
+    <li><b>คัดลอกตาราง</b> ไปวางใน Excel/อีเมล/ไลน์</li>
+    <li><b>Excel</b> ได้ 3 แผ่น: สรุป · คำสั่งซื้อ · รายชิ้น</li>
+  </ol>
+  <p>กล่อง <b>การเงิน</b> ด้านขวาแสดงยอดทั้งหมด ชำระแล้ว (โอน/เงินสด) รอตรวจ รอชำระ และจำนวนตามสถานะจัดส่ง</p>
+
+  <h3 id="admin-print">15. พิมพ์ / ใบเซ็นรับ (ใช้ตอนเสื้อมาถึง)</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a08_print.jpg" alt="พิมพ์ใบเซ็นรับ" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>เลือกเอกสาร</b> 4 แบบ (ด้านล่าง)</li>
+    <li><b>แบ่งกลุ่ม</b>: รายฝ่าย · รายหน่วย · รายตำแหน่ง · รายไซซ์ · ไม่แบ่ง · มีตัวเลือกเฉพาะฝ่าย · เรียงตามชื่อ/รหัส · ขึ้นหน้าใหม่ทุกกลุ่ม</li>
+    <li><b>ข้อความท้ายเอกสาร</b> เช่น "รับเสื้อได้ที่ฝ่าย HR วันที่ …"</li>
+    <li><b>พิมพ์ / บันทึก PDF</b> (ในหน้าต่างพิมพ์ เลือกเครื่องพิมพ์ หรือ "บันทึกเป็น PDF") · <b>เปิดในแท็บใหม่</b> ถ้าตัวอย่างไม่ขึ้นบนมือถือ</li>
+  </ol>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/a09_print_summary.jpg" alt="สรุปจำนวน" loading="lazy"></div><div class="cap">① สรุปจำนวน: รวมทุกไซซ์ + ตารางฝ่าย × ไซซ์ พร้อมช่องติ๊ก</div></div>
+    <div><div class="shot"><img src="manual/a10_print_sign.jpg" alt="ใบเซ็นรับเสื้อ" loading="lazy"></div><div class="cap">③ ใบเซ็นรับเสื้อ: ยอดไซซ์ของกลุ่ม + ช่องลงชื่อ/วันที่รับ</div></div>
+  </div>
+  <div class="fig two">
+    <div><div class="shot"><img src="manual/a11_print_labels.jpg" alt="ป้ายติดถุง" loading="lazy"></div><div class="cap">④ ป้ายติดถุงรายคน 10 ป้าย/แผ่น A4</div></div>
+    <div><p><b>② รายการจัดเตรียมรายไซซ์</b> แต่ละไซซ์มีใครบ้าง พร้อมช่อง "จัดแล้ว" ใช้ตอนหยิบเสื้อแยกกอง</p>
+      <div class="note ok"><b>ลำดับแนะนำเมื่อเสื้อมาถึง</b>① พิมพ์สรุปจำนวน ตรวจยอดกับของที่ได้รับ → ② แยกเสื้อตามไซซ์ → ④ ติดป้ายถุงรายคน (หรือแยกถุงรายฝ่ายตามข้อ ①) → ③ ส่งพร้อมใบเซ็นรับให้แต่ละฝ่าย/หน่วย ลงชื่อรับแล้วส่งคืน HR</div>
+      <p>กิจกรรมสั่งซื้อเลือกได้ว่าพิมพ์ <b>เฉพาะที่ชำระแล้ว</b> หรือทุกคำสั่งซื้อ</p></div>
+  </div>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a23_rc_print.jpg" alt="พิมพ์ของกิจกรรมสั่งซื้อ" loading="lazy"></div><div class="cap">แท็บพิมพ์ของกิจกรรมสั่งซื้อ</div></div></div>
+
+  <h3 id="admin-roster">16. รายชื่อบุคลากร</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a24_roster.jpg" alt="รายชื่อบุคลากร" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>นำเข้า Excel</b>: ใช้ไฟล์ที่ส่งออกจาก HRMi ได้ตรง ๆ (.xls/.xlsx) หรือเทมเพลตของระบบ · ระบบ <b>ข้ามคอลัมน์เลขบัตรประชาชน</b> ไม่อ่าน ไม่ส่ง ไม่เก็บ</li>
+    <li><b>เทมเพลต</b> ไฟล์ตัวอย่างพร้อมคำอธิบายคอลัมน์</li>
+    <li><b>ซิงก์ API</b>: ดึงเบอร์โทร อีเมล เพศ จากระบบ HR (ทำอัตโนมัติหลังนำเข้า และทุกคืน 01:00)</li>
+    <li><b>เพิ่มบุคลากร</b> รายคน (เช่น บุคลากรภายนอกที่ต้องการให้ร่วมกิจกรรม)</li>
+    <li><b>การ์ดกรอง</b>: ใช้งาน · ไม่ใช้งาน · <b>พบใหม่จาก API</b> (เข้าระบบได้แต่ยังไม่อยู่ในไฟล์ที่นำเข้า) · <b>ไม่พบใน API</b> (ตรวจสอบว่าลาออกหรือไม่ ระบบไม่ปิดให้เอง) · เพิ่มเอง · ไม่มีเบอร์โทร</li>
+  </ol>
+  <div class="note tip"><b>นำเข้าซ้ำได้</b>ระบบอัปเดตตามรหัสพนักงาน ไม่สร้างซ้ำ · คลิกชื่อเพื่อแก้ไขหรือปิดใช้งานรายคน</div>
+
+  <h3 id="admin-heads">17. หัวหน้าฝ่าย/หน่วย</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a26_heads.jpg" alt="หัวหน้าฝ่าย/หน่วย" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>เพิ่มหัวหน้า</b>: ใส่รหัสพนักงาน (ระบบดึงชื่อให้) เลือกระดับ <b>ฝ่าย</b> หรือ <b>หน่วย</b> ฝ่าย/หน่วยที่ดูแล และอีเมลรับสรุป</li>
+    <li><b>ส่งออก / เทมเพลต</b> เพื่อแก้หลายคนพร้อมกันใน Excel</li>
+    <li><b>นำเข้า</b> ไฟล์ที่แก้แล้ว</li>
+  </ol>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a27_head_add.jpg" alt="เพิ่มหัวหน้า" loading="lazy"></div></div></div>
+  <p>แถบเหลืองด้านบนเตือน <b>ฝ่ายที่ยังไม่มีหัวหน้า</b> · หัวหน้าที่ไม่มีอีเมล เข้าดูในระบบได้แต่ไม่ได้รับอีเมลสรุป</p>
+
+  <h3 id="admin-settings">18. ตั้งค่าระบบ</h3>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a28_settings.jpg" alt="ตั้งค่าระบบ" loading="lazy"></div></div></div>
+  <ol class="legend">
+    <li><b>ลายเซ็นท้ายอีเมล</b> (ชื่อผู้ส่ง และ Reply-To อยู่ถัดลงมา)</li>
+    <li><b>ข้อความประกาศ</b> แสดงบนทุกหน้าและหน้าเข้าสู่ระบบ (เว้นว่าง = ไม่แสดง) · สวิตช์ <b>ปิดปรับปรุง</b> ให้เฉพาะผู้ดูแลเข้าได้</li>
+    <li><b>บันทึก</b></li>
+  </ol>
+  <p>การ์ดขวามี <b>ลิงก์และ QR สำหรับประชาสัมพันธ์</b> · ด้านล่างแสดงโควตาอีเมลคงเหลือวันนี้ และรุ่นหลังบ้านว่าตรงกับหน้าเว็บหรือไม่</p>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a29_admins.jpg" alt="ผู้ดูแลระบบ" loading="lazy"></div><div class="cap">แท็บผู้ดูแลระบบ: ① เพิ่มผู้ดูแล (เฉพาะผู้ดูแลสูงสุด)</div></div></div>
+  <div class="fig pc"><div><div class="shot"><img src="manual/a30_audit.jpg" alt="ประวัติการใช้งาน" loading="lazy"></div><div class="cap">แท็บประวัติการใช้งาน: ใครทำอะไร เมื่อไร (เข้าระบบ บันทึกแทน ตรวจสลิป รับเงินสด แก้กิจกรรม ส่งอีเมล ฯลฯ)</div></div></div>
+  <p>แท็บ <b>การเชื่อมต่อ</b>: ตรวจว่าตั้งค่าบัญชี SmartAPI แล้ว · ปุ่มทดสอบการเชื่อมต่อ · แก้ Path เมื่อไอทีเปลี่ยนจาก /uat/ เป็น production</p>
+</section>
+
+<!-- ===================================================== ขั้นตอนงาน -->
+<section class="part" id="workflow">
+  <span class="ptag">ส่วนที่ 4</span>
+  <h2>ขั้นตอนงานตั้งแต่ต้นจนจบ (สำหรับ HR)</h2>
+  <h4>กิจกรรมจองไซซ์เสื้อสีม่วงเฉลิมพระเกียรติฯ (ปิดรับ 10 พ.ย. 2569 16:30 น.)</h4>
+  <ol class="flow">
+    <li>ส่งข้อความไลน์ + QR (ตั้งค่าระบบ › ลิงก์สำหรับประชาสัมพันธ์)</li>
+    <li>ดูภาพรวมทุกวัน · คลิกฝ่ายที่ % ต่ำ</li>
+    <li>ติดตาม › ยังไม่ตอบ › คัดลอกเบอร์ / อีเมลเตือน</li>
+    <li>อีเมลสรุปถึงหัวหน้า (ส่งเอง หรือตั้งรอบ จ./พฤ.)</li>
+    <li>บันทึกแทนคนที่แจ้งทางโทรศัพท์</li>
+    <li>ปิดรับ (ขยายเวลาได้ที่ตั้งค่ากิจกรรม)</li>
+    <li>ภาพรวม › สรุปส่งจัดซื้อ › กรอก MS Forms ภายใน 15 พ.ย.</li>
+    <li>เสื้อมาถึง: พิมพ์สรุปจำนวน → จัดตามไซซ์ → ใบเซ็นรับรายฝ่าย</li>
+  </ol>
+  <h4>กิจกรรมสั่งซื้อเสื้อที่ระลึกงานกาชาด (ปิดรับ 30 ต.ค. 2569 12:00 น.)</h4>
+  <ol class="flow">
+    <li>ใส่รายชื่อที่อนุญาต</li>
+    <li>ส่งข้อความไลน์ให้กลุ่มที่กำหนด</li>
+    <li>ตรวจสลิปทุกวัน (แท็บ รอตรวจสลิป)</li>
+    <li>รับเงินสด / สร้างแทน</li>
+    <li>ปิดรับ · สรุปสำหรับสั่งต่อ (เฉพาะชำระแล้ว)</li>
+    <li>เปลี่ยนสถานะ: กำลังจัดเตรียม → สั่งซื้อแล้ว รอจัดส่ง</li>
+    <li>ของมาถึง: พิมพ์ป้ายติดถุง + ใบเซ็นรับ</li>
+    <li>เปลี่ยนสถานะ: ส่งแล้ว รอรับ → รับแล้ว</li>
+  </ol>
+</section>
+
+<!-- ===================================================== FAQ -->
+<section class="part faq" id="faq">
+  <span class="ptag">ส่วนที่ 5</span>
+  <h2>ปัญหาที่พบบ่อย</h2>
+  <details><summary>เข้าสู่ระบบไม่ได้ / ขึ้นว่าข้อมูลไม่ตรง</summary>ตรวจรหัสพนักงาน และเลขบัตรประชาชน 13 หลัก (กดรูปตาเพื่อดู) · ผิด 5 ครั้งต้องรอ 10 นาที · ถ้ายังไม่ได้ อาจเป็นข้อมูลในระบบ HR ไม่ตรง ติดต่อ HR ให้ตรวจสอบหรือบันทึกแทน</details>
+  <details><summary>ขึ้นว่า "เชื่อมต่อระบบ HR ไม่ได้" หรือ "เซิร์ฟเวอร์ไม่ว่างชั่วคราว"</summary>ระบบตรวจตัวตนของโรงพยาบาลไม่ตอบชั่วคราว รอสักครู่แล้วลองใหม่</details>
+  <details><summary>เลือกไซซ์ผิด ต้องการแก้</summary>ก่อนปิดรับ: เข้าระบบ → แตะกิจกรรม → แก้ไข · หลังปิดรับ: ติดต่อ HR ให้แก้แทน</details>
+  <details><summary>ไม่ได้รับอีเมลยืนยัน</summary>ระบบส่งอีเมลตามที่อยู่ในระบบ HR เท่านั้น ถ้าไม่มีหรือไม่ถูกต้องจะไม่ได้รับ (ดูผลบันทึกได้ในระบบเสมอ) · ลองดูในโฟลเดอร์ Spam/Junk</details>
+  <details><summary>แนบสลิปแล้วขึ้นว่า "สลิปนี้เคยใช้กับคำสั่งซื้อ…"</summary>ระบบพบว่าเลขอ้างอิงบนสลิปซ้ำกับคำสั่งซื้ออื่น กรุณาตรวจว่าเลือกรูปถูกใบ ถ้าโอนรวมหลายคำสั่งซื้อในครั้งเดียว ติดต่อ HR</details>
+  <details><summary>ระบบอ่าน QR บนสลิปไม่ได้</summary>ส่งสลิปได้ตามปกติ HR จะตรวจด้วยตา · ใช้รูปสลิปต้นฉบับจากแอปธนาคาร (ไม่ครอปตัด QR ออก) จะอ่านได้ดีที่สุด</details>
+  <details><summary>หน้าเว็บขึ้นแถบ "มีระบบรุ่นใหม่" หรือหน้าตาไม่เปลี่ยนหลังอัปเดต</summary>กดปุ่ม <b>โหลดใหม่</b> ในแถบนั้น หรือปิดแล้วเปิดลิงก์ใหม่ · บนคอมกด Ctrl + F5</details>
+  <details><summary>(ผู้ดูแล) ตัวเลขในหน้าภาพรวมไม่อัปเดต</summary>กด <b>รีเฟรช</b> มุมขวาบน · ระบบเก็บข้อมูลชั่วคราวเพื่อให้เปิดเร็ว</details>
+  <details><summary>(ผู้ดูแล) ส่งอีเมลไม่ออก</summary>ดูโควตาคงเหลือที่ ตั้งค่าระบบ (ประมาณ 1,500 ฉบับ/วัน รีเซ็ตทุกวัน) · ดูผลใน "บันทึกการส่ง" ของกิจกรรม</details>
+  <div class="contact" style="margin-top:22px"><b>ติดต่อสอบถาม</b><br>ฝ่ายทรัพยากรบุคคล โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา สภากาชาดไทย · โทรภายใน <b>25400 - 23419</b></div>
+</section>
+</main>
+</div>
+<div class="foot">SOMDEJ HR Connect · คู่มือฉบับ 28 ต.ค. 2569 · ภาพประกอบใช้ข้อมูลสมมติ</div>
+<div id="lb" role="dialog" aria-label="ภาพขยาย"><img alt=""></div>
+<script>
+(function(){var lb=document.getElementById('lb'),im=lb.querySelector('img');
+document.addEventListener('click',function(e){var t=e.target;if(t.matches&&t.matches('.shot img')){im.src=t.src;im.alt=t.alt;lb.classList.add('on');}else if(lb.classList.contains('on'))lb.classList.remove('on');});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on');});})();
+</script>
+</body>
+</html>
