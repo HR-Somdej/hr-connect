@@ -13,6 +13,7 @@ function loadEvents(force) {
   return api('listEvents', {}).then(function (l) { AD.events = l; return l; });
 }
 function eventPicker(cur, base) {
+  if (S.inWs) return '';
   var list = AD.events || S.boot.events || [];
   if (list.length < 2) return '';
   return '<select class="input" style="width:auto;min-height:40px" onchange="go(\'#/admin/' + base + '/\'+this.value)">' + list.map(function (e) { return '<option value="' + esc(e.id) + '" ' + (e.id === cur ? 'selected' : '') + '>' + esc(e.title) + '</option>'; }).join('') + '</select>';
@@ -39,13 +40,13 @@ function scopeNote() {
 ROUTES['admin/dashboard'] = function (params) {
   withEvent(params, 'dashboard', function (id) {
     document.title = 'แดชบอร์ด · SOMDEJ HR Connect';
-    var draw = function (d) { if (S.route === 'admin/dashboard') drawDash(d); };
+    var draw = function (d) { if (S.wsTab === 'overview') drawDash(d); };
     api('getDashboard', { eventId: id }, { fresh: true, onCache: draw }).then(draw).catch(errToast);
   });
 };
 function drawDash(d) {
   var k = d.kpi, ev = d.event;
-  var h = pageHead(esc(ev.title), evStatusChip(ev.status) + ' &nbsp;ปิดรับ ' + esc(thDate(ev.closeAt)) + ' · ข้อมูล ณ ' + esc(thShort(d.generatedAt)),
+  var h = pageHead('ภาพรวม', 'ข้อมูล ณ ' + esc(thShort(d.generatedAt)),
     eventPicker(ev.id, 'dashboard') + '<button class="btn" id="dRefresh">' + ic('refresh') + 'รีเฟรช</button><button class="btn primary" id="dExport" data-busy="กำลังสร้างไฟล์…">' + ic('download') + 'ส่งออก Excel</button>', 'แดชบอร์ด');
   h += scopeNote();
   h += '<div class="kpis"><div class="kpi hero"><small>' + ic('chart') + ' ความคืบหน้า</small><b class="num">' + k.pct + '%</b><div class="sub">ตอบแล้ว ' + nf(k.done) + ' จาก ' + nf(k.target) + ' คน</div>' + ring(k.pct, 70) + '</div>' +
@@ -142,7 +143,7 @@ ROUTES['admin/tracking'] = function (params, q) {
   withEvent(params, 'tracking', function (id, ev) {
     document.title = 'ติดตาม · SOMDEJ HR Connect';
     TR = { id: id, ev: ev, data: null, rows: [], f: { q: '', div: q.div || '', unit: '', pos: '', group: '', status: q.status || 'all', flag: '' }, page: 1, size: 50, sort: 'unit' };
-    var draw = function (d) { if (S.route !== 'admin/tracking') return; TR.data = d; TR.ev = d.event; TR.rows = trackObjs(d); drawTracking(); };
+    var draw = function (d) { if (S.wsTab !== 'tracking') return; TR.data = d; TR.ev = d.event; TR.rows = trackObjs(d); drawTracking(); };
     api('getTracking', { eventId: id }, { fresh: true, onCache: draw }).then(draw).catch(errToast);
   });
 };
@@ -293,7 +294,7 @@ ROUTES['admin/reports'] = function (params, q) {
   withEvent(params, 'reports', function (id) {
     document.title = 'รายงาน · SOMDEJ HR Connect';
     RP = { id: id, by: q.by || 'division', x: null };
-    var draw = function (x) { if (S.route !== 'admin/reports') return; RP.x = x; drawReport(); };
+    var draw = function (x) { if (S.wsTab !== 'reports') return; RP.x = x; drawReport(); };
     api('getExport', { eventId: id }, { fresh: true, onCache: draw }).then(draw).catch(errToast);
   });
 };
@@ -339,7 +340,7 @@ ROUTES['admin/mail'] = function (params) {
 function drawMail(id) {
   var ev = AD.events.filter(function (e) { return e.id === id; })[0], mc = ev.mail || {};
   var days = mc.days || [];
-  var cards = [
+  var cards = ev.type === 'ORDER' ? [['CONFIRM', 'check', 'แจ้งสถานะคำสั่งซื้ออัตโนมัติ', 'ส่งถึงผู้สั่ง (ถ้ามีอีเมลใน HR) เมื่อ: รับคำสั่งซื้อ · ยืนยันชำระ · ตีกลับสลิป · เปลี่ยนสถานะจัดส่ง (เมื่อติ๊ก "แจ้งทางอีเมล")', 'confirm', false]] : [
     ['CONFIRM', 'check', 'ยืนยันการบันทึกถึงบุคลากร', 'ส่งทันทีที่บุคลากรบันทึก/แก้ไข พร้อมรายละเอียดไซซ์ (เฉพาะผู้มีอีเมลใน HR)', 'confirm', false],
     ['REMIND_STAFF', 'alert', 'เตือนบุคลากรที่ยังไม่ตอบ', 'ส่งรายบุคคลถึงผู้ที่ยังไม่บันทึก พร้อมปุ่มเข้าระบบ (ครั้งละไม่เกิน 400 ฉบับ)', 'remindStaff', true],
     ['HEAD_SUMMARY', 'building', 'สรุปถึงหัวหน้าฝ่าย/หน่วย', 'รายชื่อผู้ที่ยังไม่ตอบในสังกัด + ความคืบหน้า (ส่งตามรอบเฉพาะสังกัดที่ยังค้าง)', 'headSummary', true],
@@ -350,7 +351,8 @@ function drawMail(id) {
     return '<div class="mailcard"><div class="row between"><div class="ic">' + ic(c[1]) + '</div><label class="switch" title="ส่งอัตโนมัติ"><input type="checkbox" data-auto="' + c[4] + '" ' + (mc[c[4]] ? 'checked' : '') + '><span class="tr"></span><span class="small">' + (c[0] === 'CONFIRM' ? 'เปิดใช้' : 'ส่งตามรอบ') + '</span></label></div>' +
       '<h4>' + c[2] + '</h4><p>' + c[3] + '</p><div class="row"><button class="btn sm" data-pv="' + c[0] + '">' + ic('eye') + 'ดูตัวอย่าง</button>' + (c[5] ? '<button class="btn sm" data-test="' + c[0] + '">' + ic('send') + 'ส่งทดสอบ</button><button class="btn sm primary" data-send="' + c[0] + '">ส่งตอนนี้</button>' : '') + '</div></div>';
   }).join('') + '</div>';
-  h += '<div class="card" style="margin-top:18px"><div class="hd"><h3>' + ic('calendar') + ' รอบส่งอัตโนมัติ</h3><button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกการตั้งค่า</button></div><div class="bd"><div class="grid3">' +
+  if (ev.type === 'ORDER') h += '<div class="card pad small muted" style="margin-top:18px">' + ic('info') + ' กด "บันทึกการตั้งค่า" หลังเปิด/ปิดสวิตช์ <button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…" style="margin-left:8px">' + ic('check') + 'บันทึกการตั้งค่า</button><span class="hide"><select id="mHour"><option value="9">9</option></select><select id="mBefore"><option value="0">0</option></select></span></div>';
+  else h += '<div class="card" style="margin-top:18px"><div class="hd"><h3>' + ic('calendar') + ' รอบส่งอัตโนมัติ</h3><button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกการตั้งค่า</button></div><div class="bd"><div class="grid3">' +
     '<div class="field"><label class="f">วันที่ส่ง</label><div class="daypick">' + TH_DAY.map(function (d, i) { return '<label><input type="checkbox" data-day="' + i + '" ' + (days.indexOf(i) >= 0 ? 'checked' : '') + '><span>' + d + '</span></label>'; }).join('') + '</div></div>' +
     '<div class="field"><label class="f">เวลา (ประมาณ)</label><select class="input" id="mHour">' + [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map(function (x) { return '<option value="' + x + '" ' + ((mc.hour == null ? 9 : +mc.hour) === x ? 'selected' : '') + '>' + x + ':00 น.</option>'; }).join('') + '</select><div class="hint">ระบบตรวจทุกชั่วโมง ส่งในชั่วโมงนั้น</div></div>' +
     '<div class="field"><label class="f">ส่งเพิ่มก่อนปิดรับ</label><select class="input" id="mBefore">' + [0, 1, 2, 3, 5, 7].map(function (x) { return '<option value="' + x + '" ' + ((+mc.beforeCloseDays || 0) === x ? 'selected' : '') + '>' + (x ? x + ' วันก่อนปิด' : 'ไม่ส่ง') + '</option>'; }).join('') + '</select></div></div>' +
@@ -420,7 +422,7 @@ ROUTES['admin/events'] = function (params) {
       return '<div class="evcard" style="--ec:' + esc(e.color) + '"><div class="cover" style="height:110px">' + (e.config.image ? '<img src="' + esc(e.config.image) + '" alt="">' : '') + '<div class="tag">' + evStatusChip(e.status) + '</div></div><div class="body"><h3>' + esc(e.title) + '</h3>' +
         '<div class="meta"><span>' + esc({ CHOICE: 'เลือกตัวเลือก/สั่งของ', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ' }[e.type] || e.type) + '</span><span>' + ic('users') + ' ' + (e.audience.mode === 'FILTER' ? 'เฉพาะกลุ่ม' : 'ทุกคน') + '</span><span>' + ic('check') + ' ตอบแล้ว ' + nf(e.responded) + '</span></div>' +
         '<div class="meta"><span>' + ic('calendar') + ' ' + esc(thDate(e.openAt)) + ' – ' + esc(thDate(e.closeAt)) + '</span></div>' +
-        '<div class="mystate"><a class="btn sm" href="#/admin/dashboard/' + esc(e.id) + '">' + ic('chart') + 'แดชบอร์ด</a><a class="btn sm primary" href="#/admin/events/edit/' + esc(e.id) + '">' + ic('edit') + 'แก้ไข</a></div></div></div>';
+        '<div class="mystate"><a class="btn sm" href="#/admin/ev/' + esc(e.id) + '/settings">' + ic('edit') + 'ตั้งค่า</a><a class="btn sm primary" href="#/admin/ev/' + esc(e.id) + '">' + ic('arrowr') + 'เข้าทำงาน</a></div></div></div>';
     }).join('') + '</div>' : '<div class="card empty">' + ic('layers') + '<p>ยังไม่มีกิจกรรม</p></div>';
     h += '<div class="card pad" style="margin-top:20px"><h3 style="font-size:16px;margin-bottom:6px">' + ic('sparkle') + ' แผนต่อยอด</h3><p class="muted small" style="margin:0">โครงระบบรองรับกิจกรรม 3 แบบ: <b>เลือกตัวเลือก/สั่งของ</b> (ใช้งานได้แล้ว) · <b>ลงทะเบียนเข้าร่วมงาน</b> · <b>คำขอ/ขอสิทธิ (มีขั้นอนุมัติ)</b> — สองแบบหลังวางโครงข้อมูลไว้แล้ว จะเปิดใช้ในรุ่นถัดไป</p></div>';
     $('#page').innerHTML = h;
@@ -442,7 +444,7 @@ function editEvent(id) {
         '<div class="field"><label class="f">ชื่อกิจกรรม *</label><input class="input" data-k="title" value="' + esc(ED.title) + '"></div>' +
         '<div class="field"><label class="f">คำอธิบายย่อ (บรรทัดรอง)</label><input class="input" data-k="subtitle" value="' + esc(ED.subtitle || '') + '"></div>' +
         '<div class="field"><label class="f">รายละเอียด</label><textarea class="input" data-k="description">' + esc(ED.description || '') + '</textarea></div>' +
-        '<div class="grid2"><div class="field"><label class="f">ชนิด</label><select class="input" data-k="type"' + (isNew ? '' : ' disabled') + '><option value="CHOICE">เลือกตัวเลือก / สั่งของ</option><option value="REGISTER">ลงทะเบียนเข้าร่วม (รุ่นถัดไป)</option><option value="REQUEST">คำขอ / ขอสิทธิ (รุ่นถัดไป)</option></select></div>' +
+        '<div class="grid2"><div class="field"><label class="f">ชนิด</label><select class="input" data-k="type"' + (isNew ? '' : ' disabled') + '><option value="CHOICE">เลือกตัวเลือก / จองไซซ์ (ไม่เก็บเงิน)</option><option value="ORDER" ' + (ED.type === 'ORDER' ? 'selected' : '') + '>สั่งซื้อ + ชำระเงิน (QR พร้อมเพย์ + แนบสลิป)</option><option value="REGISTER">ลงทะเบียนเข้าร่วม (รุ่นถัดไป)</option><option value="REQUEST">คำขอ / ขอสิทธิ (รุ่นถัดไป)</option></select></div>' +
         '<div class="field"><label class="f">สีประจำกิจกรรม</label><div class="colorpick">' + COLORS.map(function (x) { return '<button type="button" data-color="' + x + '" class="' + (x.toLowerCase() === String(ED.color).toLowerCase() ? 'on' : '') + '" style="background:' + x + '"></button>'; }).join('') + '</div></div></div>' +
         '<div class="grid2"><div class="field"><label class="f">เปิดรับ</label><input class="input" type="datetime-local" data-k="openAt" value="' + esc(dtLocal(ED.openAt)) + '"></div><div class="field"><label class="f">ปิดรับ</label><input class="input" type="datetime-local" data-k="closeAt" value="' + esc(dtLocal(ED.closeAt)) + '"><div class="hint">ขยายเวลาได้ตลอด · หลังปิดแอดมินยังบันทึกแทนได้</div></div></div>' +
         '<label class="switch"><input type="checkbox" id="evPub" ' + (ED.published ? 'checked' : '') + '><span class="tr"></span>เผยแพร่ (บุคลากรมองเห็น)</label></div></div>' +
@@ -450,7 +452,7 @@ function editEvent(id) {
         '<div id="audBox" style="margin-top:12px;' + (a.mode === 'FILTER' ? '' : 'display:none') + '"><div class="field"><label class="f">ฝ่าย (ชื่อเต็ม คั่นด้วยบรรทัด)</label><textarea class="input" data-a="divisions" placeholder="รพ.สมเด็จฯ - ฝ่ายการพยาบาล">' + esc((a.divisions || []).join('\n')) + '</textarea></div>' +
         '<div class="grid2"><div class="field"><label class="f">กลุ่มบุคลากร</label><textarea class="input" data-a="groups">' + esc((a.groups || []).join('\n')) + '</textarea></div><div class="field"><label class="f">ตำแหน่ง</label><textarea class="input" data-a="positions">' + esc((a.positions || []).join('\n')) + '</textarea></div></div>' +
         '<div class="field"><label class="f">รหัสพนักงานเพิ่มเติม (คั่นด้วย , หรือบรรทัด)</label><textarea class="input" data-a="codes">' + esc((a.codes || []).join('\n')) + '</textarea><div class="hint">เงื่อนไขต่างหมวดต้องตรงทุกข้อ · รหัสที่ระบุได้สิทธิ์เสมอ</div></div></div></div></div></div>' +
-        '<div class="stack">' + (ED.type === 'CHOICE' ? choiceEditor(c) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
+        '<div class="stack">' + (ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
       $('#page').innerHTML = h;
       bindEditor();
     };
@@ -459,22 +461,31 @@ function editEvent(id) {
       ED.published = $('#evPub').checked;
       var a = ED.audience = ED.audience || { mode: 'ALL' };
       $$('[data-a]').forEach(function (t) { a[t.dataset.a] = t.value.split(/[\n,]+/).map(function (x) { return x.trim(); }).filter(Boolean); });
-      if (ED.type === 'CHOICE') {
+      if (ED.type === 'CHOICE' || ED.type === 'ORDER') {
         var c = ED.config;
         $$('[data-c]').forEach(function (i) { var k = i.dataset.c; c[k] = i.type === 'checkbox' ? i.checked : i.type === 'number' ? +i.value : i.value; });
-        c.coordinator = { name: $('#coName').value.trim(), phone: $('#coPhone').value.trim() };
+        if ($('#coName')) c.coordinator = { name: $('#coName').value.trim(), phone: $('#coPhone').value.trim() };
+        if (ED.type === 'ORDER') {
+          c.payment = { promptpay: $('#pyId').value.replace(/\D/g, ''), accountName: $('#pyName').value.trim(), note: $('#pyNote').value.trim() };
+          c.shipping = c.shipping || {}; c.shipping.enabled = $('#shOn').checked; c.shipping.label = $('#shLabel').value.trim() || 'ค่าส่ง';
+          c.shipping.table = $('#shTable').value.split(/\n+/).map(function (l) { var m = l.match(/(\d+)\D+(\d+(?:\.\d+)?)/); return m ? [+m[1], +m[2]] : null; }).filter(Boolean);
+        }
         $$('[data-oi]').forEach(function (box) {
-          var o = c.options[+box.dataset.oi];
+          var o = c.options[+box.dataset.oi], prev = o.sizes || [];
           o.label = $('[data-ol]', box).value.trim(); o.key = $('[data-ok]', box).value.trim().toUpperCase();
           o.sizes = $$('tr[data-si]', box).map(function (tr) {
-            var s = { code: $('[data-s=code]', tr).value.trim().toUpperCase(), chest: $('[data-s=chest]', tr).value.trim(), length: $('[data-s=length]', tr).value.trim() };
+            var s = Object.assign({}, prev[+tr.dataset.si] || {}); delete s.note; delete s.hidden;   // เก็บค่าที่ไม่มีช่องแก้ (ความยาวแขน/ชายเสื้อ)
+            s.code = $('[data-s=code]', tr).value.trim().toUpperCase(); s.chest = $('[data-s=chest]', tr).value.trim(); s.length = $('[data-s=length]', tr).value.trim();
             var note = $('[data-s=note]', tr).value.trim(); if (note) s.note = note; if ($('[data-s=hidden]', tr).checked) s.hidden = true;
+            var pr = $('[data-s=price]', tr); if (pr) s.price = +pr.value || 0;
             if (s.chest !== '') s.chest = +s.chest; if (s.length !== '') s.length = +s.length; return s;
           }).filter(function (s) { return s.code; });
         });
       }
+
     };
     var bindEditor = function () {
+      var tsel = $('[data-k=type]'); if (tsel) tsel.onchange = function () { readForm(); if (ED.type === 'ORDER') { ED.config.payment = ED.config.payment || { promptpay: '', accountName: '' }; ED.config.shipping = ED.config.shipping || { enabled: false, label: 'ค่าส่ง EMS', table: [] }; ED.config.orderPrefix = ED.config.orderPrefix || 'OD'; ED.audience = { mode: 'FILTER', codes: [] }; } draw(); };
       $$('[data-color]').forEach(function (b) { b.onclick = function () { readForm(); ED.color = b.dataset.color; setAccent(ED.color); draw(); }; });
       $$('#audMode [data-m]').forEach(function (b) { b.onclick = function () { readForm(); ED.audience.mode = b.dataset.m; draw(); }; });
       $$('[data-addsize]').forEach(function (b) { b.onclick = function () { readForm(); ED.config.options[+b.dataset.addsize].sizes.push({ code: '', chest: '', length: '' }); draw(); }; });
@@ -501,14 +512,15 @@ function editEvent(id) {
         if (!ED.closeAt) return toast('กรุณาระบุวันปิดรับ', 'warn');
         busy(this, api('saveEvent', { event: ED })).then(function (r) {
           AD.events = null; toast('บันทึกกิจกรรม "' + r.title + '" แล้ว', 'ok');
-          refreshBoot().catch(function () { }); go('#/admin/events');
+          refreshBoot().catch(function () { }); go(isNew ? '#/admin/ev/' + r.id + '/settings' : '#/admin/ev/' + r.id);
         }).catch(errToast);
       };
     };
     draw();
   }).catch(errToast);
 }
-function choiceEditor(c) {
+function choiceEditor(c, type) {
+  var ord = type === 'ORDER';
   return '<div class="card"><div class="hd"><h3>รายการ / ไซซ์</h3><button class="btn sm" id="addOpt">' + ic('plus') + 'เพิ่มแบบ</button></div><div class="bd">' +
     '<div class="grid2"><div class="field"><label class="f">ชื่อสิ่งของ</label><input class="input" data-c="itemName" value="' + esc(c.itemName || '') + '"></div><div class="field"><label class="f">ไฟล์รูป (ในหน้าเว็บ) หรือ URL</label><input class="input" data-c="image" id="imgIn" value="' + esc(c.image || '') + '"><div class="hint">อัปโหลดรูปขึ้น GitHub (repo hr-connect) แล้วพิมพ์ชื่อไฟล์ที่นี่</div></div></div>' +
     '<div class="imgprev"><div class="box"><small>ตัวอย่าง: การ์ดหน้าแรก (ภาพแสดงเต็ม ไม่ตัดขอบ)</small><div class="frame" style="height:120px"><img id="imgPv1" alt=""></div></div>' +
@@ -516,17 +528,17 @@ function choiceEditor(c) {
     '<div class="meta muted" id="imgMeta" style="grid-column:1/-1"></div></div>' +
     (c.options || []).map(function (o, oi) {
       return '<div data-oi="' + oi + '" style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px"><div class="row" style="margin-bottom:8px"><input class="input" data-ol value="' + esc(o.label) + '" style="flex:1;min-width:140px" placeholder="ชื่อแบบ"><input class="input" data-ok value="' + esc(o.key) + '" style="width:80px" placeholder="รหัส" title="รหัสแบบ (ห้ามเปลี่ยนเมื่อมีคนจองแล้ว)"><button class="iconbtn" data-delopt="' + oi + '" title="ลบแบบ">' + ic('trash') + '</button></div>' +
-        '<div class="tablewrap"><table class="t sizeeditor"><thead><tr><th>ไซซ์</th><th>อก (นิ้ว)</th><th>ยาว (นิ้ว)</th><th>หมายเหตุ</th><th title="ซ่อนจากผู้ใช้">ซ่อน</th><th></th></tr></thead><tbody>' +
+        '<div class="tablewrap"><table class="t sizeeditor"><thead><tr><th>ไซซ์</th>' + (ord ? '<th>ราคา (฿)</th>' : '') + '<th>อก (นิ้ว)</th><th>ยาว (นิ้ว)</th><th>หมายเหตุ</th><th title="ซ่อนจากผู้ใช้">ซ่อน</th><th></th></tr></thead><tbody>' +
         o.sizes.map(function (s, si) {
-          return '<tr data-si="' + si + '"><td><input class="input" data-s="code" value="' + esc(s.code) + '" style="width:70px"></td><td><input class="input" data-s="chest" type="number" step="0.5" value="' + esc(s.chest) + '" style="width:76px"></td><td><input class="input" data-s="length" type="number" step="0.5" value="' + esc(s.length) + '" style="width:76px"></td>' +
+          return '<tr data-si="' + si + '"><td><input class="input" data-s="code" value="' + esc(s.code) + '" style="width:70px"></td>' + (ord ? '<td><input class="input" data-s="price" type="number" min="0" value="' + esc(s.price || 0) + '" style="width:84px"></td>' : '') + '<td><input class="input" data-s="chest" type="number" step="0.5" value="' + esc(s.chest) + '" style="width:76px"></td><td><input class="input" data-s="length" type="number" step="0.5" value="' + esc(s.length) + '" style="width:76px"></td>' +
             '<td><input class="input" data-s="note" value="' + esc(s.note || '') + '" placeholder="-"></td><td><input type="checkbox" data-s="hidden" ' + (s.hidden ? 'checked' : '') + '></td><td style="white-space:nowrap"><button class="iconbtn" data-mv="' + oi + ':' + si + ':-1">' + ic('up') + '</button><button class="iconbtn" data-mv="' + oi + ':' + si + ':1">' + ic('down') + '</button><button class="iconbtn" data-delsize="' + oi + ':' + si + '">' + ic('trash') + '</button></td></tr>';
         }).join('') + '</tbody></table></div><button class="btn sm ghost" data-addsize="' + oi + '" style="margin-top:6px">' + ic('plus') + 'เพิ่มไซซ์</button></div>';
     }).join('') +
     '<div class="field"><label class="f">หมายเหตุตารางไซซ์</label><input class="input" data-c="sizeNote" value="' + esc(c.sizeNote || '') + '"></div>' +
-    '<div class="grid3"><div class="field"><label class="f">จำนวนต่อคน</label><input class="input" type="number" min="1" data-c="qtyPerPerson" value="' + esc(c.qtyPerPerson || 1) + '"></div><div class="field"><label class="f">สั่งเพิ่มได้สูงสุด</label><input class="input" type="number" min="0" data-c="extraMax" value="' + esc(c.extraMax || 0) + '"></div><div class="field"><label class="f">ราคาต่อตัวที่สั่งเพิ่ม (บาท)</label><input class="input" type="number" min="0" data-c="extraPrice" value="' + esc(c.extraPrice || 0) + '"></div></div>' +
+    (ord ? orderSettingsHtml(c) : '<div class="grid3"><div class="field"><label class="f">จำนวนต่อคน</label><input class="input" type="number" min="1" data-c="qtyPerPerson" value="' + esc(c.qtyPerPerson || 1) + '"></div><div class="field"><label class="f">สั่งเพิ่มได้สูงสุด</label><input class="input" type="number" min="0" data-c="extraMax" value="' + esc(c.extraMax || 0) + '"></div><div class="field"><label class="f">ราคาต่อตัวที่สั่งเพิ่ม (บาท)</label><input class="input" type="number" min="0" data-c="extraPrice" value="' + esc(c.extraPrice || 0) + '"></div></div>' +
     '<div class="row" style="gap:20px;margin-bottom:14px"><label class="switch"><input type="checkbox" data-c="allowExtra" ' + (c.allowExtra ? 'checked' : '') + '><span class="tr"></span>อนุญาตสั่งเพิ่ม (จ่ายเงินเพิ่ม)</label><label class="switch"><input type="checkbox" data-c="allowDecline" ' + (c.allowDecline !== false ? 'checked' : '') + '><span class="tr"></span>มีตัวเลือก "ไม่ประสงค์"</label><label class="switch"><input type="checkbox" data-c="requireReason" ' + (c.requireReason ? 'checked' : '') + '><span class="tr"></span>บังคับเหตุผล</label></div>' +
     '<div class="field"><label class="f">ข้อความปุ่ม "ไม่ประสงค์"</label><input class="input" data-c="declineLabel" value="' + esc(c.declineLabel || '') + '"></div>' +
-    '<div class="grid2"><div class="field"><label class="f">หน่วยงาน (สำหรับแบบฟอร์มจัดซื้อ)</label><input class="input" data-c="exportUnit" value="' + esc(c.exportUnit || '') + '"></div><div class="field"><label class="f">ผู้ประสานงาน</label><div class="row" style="flex-wrap:nowrap"><input class="input" id="coName" value="' + esc((c.coordinator || {}).name || '') + '" placeholder="ชื่อ-สกุล"><input class="input" id="coPhone" value="' + esc((c.coordinator || {}).phone || '') + '" placeholder="เบอร์โทร" style="max-width:150px"></div></div></div></div></div>';
+    '<div class="grid2"><div class="field"><label class="f">หน่วยงาน (สำหรับแบบฟอร์มจัดซื้อ)</label><input class="input" data-c="exportUnit" value="' + esc(c.exportUnit || '') + '"></div><div class="field"><label class="f">ผู้ประสานงาน</label><div class="row" style="flex-wrap:nowrap"><input class="input" id="coName" value="' + esc((c.coordinator || {}).name || '') + '" placeholder="ชื่อ-สกุล"><input class="input" id="coPhone" value="' + esc((c.coordinator || {}).phone || '') + '" placeholder="เบอร์โทร" style="max-width:150px"></div></div></div>') + '</div></div>';
 }
 
 /* =================================================================== รายชื่อบุคลากร */
@@ -836,4 +848,48 @@ function settingsAudit() {
   $('#stBody').innerHTML = '<div class="card"><div class="hd"><h3>ประวัติการใช้งาน (ล่าสุด)</h3><input class="input" id="auQ" placeholder="ค้นหา รหัส / รายการ" style="max-width:280px;min-height:38px"></div><div id="auList">' + skel(1) + '</div></div>';
   $('#auQ').oninput = debounce(function () { load($('#auQ').value.trim()); }, 400);
   load('');
+}
+
+/* =================================================================== พื้นที่ทำงานต่อกิจกรรม (แยกแต่ละกิจกรรมชัดเจน) */
+var TYPE_TH = { CHOICE: 'เลือกตัวเลือก / จองไซซ์', ORDER: 'สั่งซื้อ + ชำระเงิน', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ' };
+function wsTabs(ev) {
+  var t = ev.type === 'ORDER'
+    ? [['orders', 'คำสั่งซื้อ / ตรวจสลิป', 'shirt'], ['summary', 'สรุปสำหรับสั่งต่อ', 'table'], ['mail', 'อีเมล', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']]
+    : [['overview', 'ภาพรวม', 'chart'], ['tracking', 'ติดตามรายบุคคล', 'users'], ['reports', 'รายงาน', 'table'], ['mail', 'อีเมลติดตาม', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']];
+  if (!isAdmin()) t = t.filter(function (x) { return ['overview', 'tracking', 'reports'].indexOf(x[0]) >= 0; });
+  return t;
+}
+ROUTES['admin/ev'] = function (params, q) {
+  if (!needViewer()) return;
+  $('#page').innerHTML = skel(3);
+  loadEvents().then(function (list) {
+    if (!isAdmin()) list = list.filter(function (e) { return e.type !== 'ORDER'; });
+    var id = params[0] || S.lastAdminEvent || (list[0] && list[0].id), ev = list.filter(function (e) { return e.id === id; })[0];
+    if (!ev) { $('#page').innerHTML = '<div class="card empty">' + ic('layers') + '<p>ไม่พบกิจกรรม</p><a class="btn" href="#/admin/events">กิจกรรมทั้งหมด</a></div>'; return; }
+    var tabs = wsTabs(ev), tab = params[1] && tabs.some(function (t) { return t[0] === params[1]; }) ? params[1] : tabs[0][0];
+    S.lastAdminEvent = ev.id; S.inWs = true; S.wsTab = tab;
+    setAccent(ev.color); shell();
+    document.title = ev.title + ' · ' + tabs.filter(function (t) { return t[0] === tab; })[0][1];
+    $('#evbar').innerHTML = '<div class="evbar" style="--ec:' + esc(ev.color) + '">' + (isAdmin() ? '<a class="crumb" href="#/admin/events" style="text-decoration:none">' + ic('arrowl') + ' กิจกรรมทั้งหมด</a>' : '') +
+      '<div class="row between" style="align-items:flex-start;margin-top:4px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="evicon">' + ic(ev.type === 'ORDER' ? 'shirt' : 'layers') + '</span><div><h1>' + esc(ev.title) + '</h1>' +
+      '<div class="row small muted" style="gap:8px;margin-top:4px">' + evStatusChip(ev.status) + '<span class="chip">' + esc(TYPE_TH[ev.type] || ev.type) + '</span><span>' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.audience && ev.audience.mode === 'FILTER' ? '<span>' + ic('users') + ' เฉพาะกลุ่ม</span>' : '') + '</div></div></div>' +
+      '<div class="row">' + (isAdmin() && (AD.events || []).length > 1 ? '<select class="input" id="wsSwitch" style="width:auto;min-height:38px">' + AD.events.map(function (e) { return '<option value="' + esc(e.id) + '" ' + (e.id === ev.id ? 'selected' : '') + '>' + esc(e.title) + '</option>'; }).join('') + '</select>' : '') +
+      '<a class="btn sm" href="#/event/' + esc(ev.id) + '">' + ic('eye') + 'มุมมองบุคลากร</a></div></div>' +
+      '<div class="tabs" style="margin:14px 0 0;border:0">' + tabs.map(function (t) { return '<a href="#/admin/ev/' + esc(ev.id) + '/' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + ic(t[2]) + t[1] + '</a>'; }).join('') + '</div></div>';
+    var sw = $('#wsSwitch'); if (sw) sw.onchange = function () { go('#/admin/ev/' + sw.value); };
+    $('#page').classList.add('ws');
+    var id1 = [ev.id];
+    ({ overview: function () { ROUTES['admin/dashboard'](id1); }, tracking: function () { ROUTES['admin/tracking'](id1, q || {}); }, reports: function () { ROUTES['admin/reports'](id1, q || {}); },
+      mail: function () { ROUTES['admin/mail'](id1); }, settings: function () { editEvent(ev.id); }, orders: function () { adminOrdersPage(ev.id); }, summary: function () { adminOrderSummaryPage(ev.id); } })[tab]();
+  }).catch(errToast);
+};
+
+function orderSettingsHtml(c) {
+  var p = c.payment || {}, sh = c.shipping || {};
+  return '<h4 style="margin:6px 0 10px">' + ic('send') + ' การชำระเงิน</h4><div class="grid3"><div class="field"><label class="f">พร้อมเพย์ (เบอร์/เลขบัตร/เลขภาษี)</label><input class="input" id="pyId" inputmode="numeric" value="' + esc(p.promptpay || '') + '"></div>' +
+    '<div class="field"><label class="f">ชื่อบัญชีผู้รับ (ให้ผู้โอนตรวจ)</label><input class="input" id="pyName" value="' + esc(p.accountName || '') + '"></div><div class="field"><label class="f">คำนำหน้าเลขที่คำสั่งซื้อ</label><input class="input" data-c="orderPrefix" value="' + esc(c.orderPrefix || 'OD') + '" maxlength="6"></div></div>' +
+    '<div class="grid2"><div class="field"><label class="f">ข้อความถึงผู้โอน</label><input class="input" id="pyNote" value="' + esc(p.note || '') + '"></div><div class="field"><label class="f">สั่งได้สูงสุดต่อคำสั่งซื้อ (0 = ไม่จำกัด)</label><input class="input" type="number" min="0" data-c="maxPerOrder" value="' + esc(c.maxPerOrder || 0) + '"></div></div>' +
+    '<h4 style="margin:6px 0 10px">' + ic('send') + ' ค่าส่ง</h4><label class="switch" style="margin-bottom:10px"><input type="checkbox" id="shOn" ' + (sh.enabled ? 'checked' : '') + '><span class="tr"></span>คิดค่าส่ง (ปิด = รวมส่งทั้ง รพ. ไม่มีค่าส่ง)</label>' +
+    '<div class="grid2"><div class="field"><label class="f">ชื่อรายการค่าส่ง</label><input class="input" id="shLabel" value="' + esc(sh.label || 'ค่าส่ง EMS') + '"></div><div class="field"><label class="f">ตารางค่าส่ง (บรรทัดละ "จำนวน,ค่าส่ง")</label><textarea class="input" id="shTable" style="min-height:90px">' + esc((sh.table || []).map(function (r) { return r[0] + ',' + r[1]; }).join('\n')) + '</textarea><div class="hint">เกินตาราง = ค่าส่งแถวสุดท้าย +10 บาท/ตัว</div></div></div>' +
+    '<div class="small muted">' + ic('info') + ' รายชื่อผู้ที่สั่งได้: ตั้งที่กล่อง "ผู้มีสิทธิ์เข้าร่วม" ด้านซ้าย (เฉพาะกลุ่ม › รหัสพนักงาน) หรือแท็บ คำสั่งซื้อ › รายชื่อที่อนุญาต</div>';
 }

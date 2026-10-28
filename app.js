@@ -1,6 +1,6 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-28.2';
+var HRC_BUILD = '2569-10-28.3';
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -259,29 +259,37 @@ function parseRoute() {
 }
 function render() {
   if (!S.token || !S.boot) return showLogin();
-  var r = parseRoute(), name = r.parts[0] || 'home';
-  if (name === 'admin') name = 'admin/' + (r.parts[1] || 'dashboard');
+  var r = parseRoute(), name = r.parts[0] || 'home', params = r.parts.slice(1);
+  if (name === 'admin') {
+    var sub = r.parts[1] || 'events', legacy = { dashboard: 'overview', tracking: 'tracking', reports: 'reports', mail: 'mail' };
+    params = r.parts.slice(2);
+    if (legacy[sub]) { name = 'admin/ev'; params = [params[0] || '', legacy[sub]]; } else name = 'admin/' + sub;
+    if (name === 'admin/events' && !isAdmin() && isHead()) { name = 'admin/ev'; params = []; }
+  }
   var fn = ROUTES[name];
-  if (!fn) { name = 'home'; fn = ROUTES.home; }
-  S.route = name;
+  if (!fn) { name = 'home'; fn = ROUTES.home; params = []; }
+  S.route = name; S.inWs = false; S.wsTab = null;
   shell();
+  $('#evbar').innerHTML = ''; $('#page').classList.remove('ws');
   window.scrollTo(0, 0);
-  try { fn(r.parts.slice(name.indexOf('admin/') === 0 ? 2 : 1), r.q); }
+  try { fn(params, r.q); }
   catch (e) { console.error(e); $('#page').innerHTML = '<div class="empty">' + ic('alert') + '<p>' + esc(e.message) + '</p></div>'; }
 }
 function defaultEventId() { var ev = (S.boot.events || [])[0]; return ev ? ev.id : ''; }
+function navEvents() {
+  var list = (window.AD && AD.events) || S.boot.events || [];
+  if (!isAdmin()) list = list.filter(function (e) { return e.type !== 'ORDER'; });
+  return list.filter(function (e) { return e.status !== 'CLOSED' || e.id === S.lastAdminEvent || list.length <= 6; }).slice(0, 12);
+}
 function navItems() {
-  var ev = S.lastAdminEvent || defaultEventId(), items = [{ sec: 'บุคลากร' }, { k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก / กิจกรรม' }];
+  var items = [{ sec: 'บุคลากร' }, { k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก / กิจกรรมของฉัน' }];
   if (isAdmin() || isHead()) {
-    items.push({ sec: isAdmin() ? 'ผู้ดูแลระบบ' : 'หัวหน้าฝ่าย/หน่วย' });
-    items.push({ k: 'admin/dashboard', href: '#/admin/dashboard/' + ev, icon: 'chart', label: 'แดชบอร์ด' });
-    items.push({ k: 'admin/tracking', href: '#/admin/tracking/' + ev, icon: 'users', label: 'ติดตามรายบุคคล' });
-    items.push({ k: 'admin/reports', href: '#/admin/reports/' + ev, icon: 'table', label: 'รายงาน' });
+    items.push({ sec: isAdmin() ? 'กิจกรรม (ผู้ดูแล)' : 'กิจกรรม (หัวหน้า)' });
+    navEvents().forEach(function (e) { items.push({ k: 'ev:' + e.id, href: '#/admin/ev/' + e.id, dot: e.color, label: e.title, ev: e }); });
+    if (isAdmin()) items.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'จัดการกิจกรรมทั้งหมด' });
   }
   if (isAdmin()) {
-    items.push({ k: 'admin/mail', href: '#/admin/mail/' + ev, icon: 'mail', label: 'อีเมลติดตาม' });
-    items.push({ sec: 'จัดการ' });
-    items.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' });
+    items.push({ sec: 'ระบบ' });
     items.push({ k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อบุคลากร' });
     items.push({ k: 'admin/heads', href: '#/admin/heads', icon: 'building', label: 'หัวหน้าฝ่าย/หน่วย' });
     items.push({ k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่าระบบ' });
@@ -294,18 +302,22 @@ function shell() {
     app.innerHTML = '<aside class="side"><div class="brandbox"><img src="logo.jpg" alt=""><div><b>SOMDEJ HR Connect</b><small>ศูนย์รวมกิจกรรมบุคลากร</small></div></div><nav class="nav" id="nav"></nav>' +
       '<div class="me"><div class="avatar" id="meav"></div><div class="who"><b id="mename"></b><small id="mesub"></small></div><button class="iconbtn" id="btnout" title="ออกจากระบบ" aria-label="ออกจากระบบ">' + ic('logout') + '</button></div><div class="ver">v' + HRC_VERSION + ' · ' + HRC_BUILD + '</div></aside>' +
       '<div class="main"><header class="topbar"><img src="logo.jpg" alt=""><div style="flex:1;min-width:0"><b>SOMDEJ HR Connect</b><small id="topsub"></small></div><button class="iconbtn" id="btnout2" aria-label="ออกจากระบบ">' + ic('logout') + '</button></header>' +
-      '<main class="content"><div id="annc"></div><div id="page"></div></main></div><nav class="bottomnav" id="bnav"></nav>';
+      '<main class="content"><div id="annc"></div><div id="evbar"></div><div id="page"></div></main></div><nav class="bottomnav" id="bnav"></nav>';
     $('#btnout').onclick = $('#btnout2').onclick = askLogout;
   }
   var items = navItems();
   $('#nav').innerHTML = items.map(function (it) {
     if (it.sec) return '<div class="sec">' + esc(it.sec) + '</div>';
-    return '<a href="' + it.href + '" class="' + (S.route === it.k ? 'on' : '') + '">' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
+    var on = it.ev ? (S.route === 'admin/ev' && S.lastAdminEvent === it.ev.id) : S.route === it.k;
+    if (it.ev) return '<a href="' + it.href + '" class="evnav ' + (on ? 'on' : '') + '" title="' + esc(it.label) + '"><span class="edot" style="background:' + esc(it.dot) + '"></span><span class="t">' + esc(it.label) + '</span>' + (it.ev.status === 'OPEN' ? '<span class="live"></span>' : '') + '</a>';
+    return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '">' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
   }).join('');
-  var mob = items.filter(function (i) { return !i.sec; });
-  if (mob.length > 5) mob = mob.filter(function (i) { return ['home', 'admin/dashboard', 'admin/tracking', 'admin/reports', 'admin/settings'].indexOf(i.k) >= 0; });
+  var mob = [{ k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก' }];
+  if (isAdmin()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' }, { k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อ' }, { k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่า' });
+  else if (isHead()) mob.push({ k: 'admin/ev', href: '#/admin/ev', icon: 'chart', label: 'ติดตาม' });
   $('#bnav').innerHTML = mob.length > 1 ? mob.map(function (it) {
-    return '<a href="' + it.href + '" class="' + (S.route === it.k ? 'on' : '') + '">' + ic(it.icon) + '<span>' + esc(it.label.split(' / ')[0].replace('ติดตามรายบุคคล', 'ติดตาม')) + '</span></a>';
+    var on = S.route === it.k || (it.k === 'admin/events' && S.route === 'admin/ev');
+    return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '">' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
   }).join('') : '';
   $('#bnav').style.display = mob.length > 1 ? '' : 'none';
   $('#meav').textContent = initials(S.me.firstName || S.me.name);

@@ -72,7 +72,7 @@ function showLogin() {
       try { localStorage.setItem('hrc_lastemp', e); } catch (x) { }
       saveSession(r.data.token, r.data.boot);
       toast('ยินดีต้อนรับ ' + S.me.name, 'ok', 'เข้าสู่ระบบสำเร็จ');
-      var pending = (S.boot.events || []).filter(function (x) { return x.status === 'OPEN' && !S.boot.mine[x.id]; });
+      var pending = (S.boot.events || []).filter(function (x) { return x.status === 'OPEN' && x.type !== 'ORDER' && !S.boot.mine[x.id]; });
       if ((!location.hash || location.hash === '#/' ) && pending.length === 1) location.hash = '#/event/' + pending[0].id;
       app.innerHTML = '';
       render();
@@ -110,8 +110,22 @@ function myStateHtml(ev, r) {
   var o = ((ev.config || {}).options || []).filter(function (x) { return x.key === r.optKey; })[0];
   return '<span class="chip ok">' + ic('check') + ' ' + esc(o ? o.label : r.optKey) + ' · ไซซ์ ' + esc(r.sizeCode) + '</span>';
 }
+function orderStateHtml(ev) {
+  var x = (S.boot.orders || {})[ev.id];
+  if (!x || !x.count) return ev.status === 'OPEN' ? '<span class="chip">ยังไม่มีคำสั่งซื้อ</span>' : '<span class="chip">ไม่มีคำสั่งซื้อ</span>';
+  if (x.unpaid || x.rejected) return '<span class="chip warn dot">' + (x.rejected ? 'สลิปถูกตีกลับ ' + x.rejected : 'รอชำระ ' + x.unpaid) + ' รายการ</span>';
+  if (x.pending) return '<span class="chip info dot">รอตรวจสลิป ' + x.pending + '</span>';
+  return '<span class="chip ok">' + ic('check') + ' ชำระแล้ว ' + x.qty + ' ตัว</span>';
+}
 function evCard(ev) {
   var r = S.boot.mine[ev.id], cfg = ev.config || {}, left = daysLeft(ev.closeAt);
+  if (ev.type === 'ORDER') {
+    var x = (S.boot.orders || {})[ev.id], act = x && (x.unpaid || x.rejected);
+    return '<a class="evcard" href="#/event/' + esc(ev.id) + '" style="--ec:' + esc(ev.color) + '"><div class="cover">' + (cfg.image ? '<img src="' + esc(cfg.image) + '" alt="" loading="lazy">' : '') +
+      '<div class="tag">' + evStatusChip(ev.status) + ' <span class="chip" style="background:#fff">' + ic('shirt') + ' สั่งซื้อ</span></div></div><div class="body"><h3>' + esc(ev.title) + '</h3>' +
+      '<div class="meta"><span>' + ic('calendar') + ' ปิดรับ ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.status === 'OPEN' && left != null ? '<span>' + ic('clock') + ' เหลือ ' + left + ' วัน</span>' : '') + '</div>' +
+      '<div class="mystate">' + orderStateHtml(ev) + '<span class="btn sm ' + (act || (!x && ev.status === 'OPEN') ? 'primary' : '') + '">' + (act ? 'ชำระเงิน' : x ? 'ดูคำสั่งซื้อ' : ev.status === 'OPEN' ? 'สั่งซื้อ' : 'ดูรายละเอียด') + ' ' + ic('arrowr') + '</span></div></div></a>';
+  }
   return '<a class="evcard" href="#/event/' + esc(ev.id) + '" style="--ec:' + esc(ev.color) + '"><div class="cover">' + (cfg.image ? '<img src="' + esc(cfg.image) + '" alt="" loading="lazy">' : '') +
     '<div class="tag">' + evStatusChip(ev.status) + '</div></div><div class="body"><h3>' + esc(ev.title) + '</h3>' +
     '<div class="meta"><span>' + ic('calendar') + ' ปิดรับ ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.status === 'OPEN' && left != null ? '<span>' + ic('clock') + ' เหลือ ' + left + ' วัน</span>' : '') + '</div>' +
@@ -126,9 +140,15 @@ ROUTES.event = function (params) {
   if (!id) return go('#/');
   $('#page').innerHTML = skel(3);
   var cached = (S.boot.events || []).filter(function (e) { return e.id === id; })[0];
+  var loadOrders = function () {
+    return api('getMyOrders', { eventId: id }).then(function (d) { if (S.route === 'event') drawOrderEvent(d.event, d); })
+      .catch(function (e) { errToast(e, 'โหลดกิจกรรมไม่สำเร็จ'); $('#page').innerHTML = '<div class="card empty">' + ic('alert') + '<p>' + esc(e.message) + '</p><a class="btn" href="#/">กลับหน้าแรก</a></div>'; });
+  };
+  if (cached && cached.type === 'ORDER') return loadOrders();
   if (cached) { EVS = { ev: cached, mine: S.boot.mine[id] || null }; drawEvent(); }
   api('getEvent', { eventId: id }).then(function (d) {
     if (S.route !== 'event') return;
+    if (d.event.type === 'ORDER') return loadOrders();
     var keep = EVS && EVS.ev.id === id ? EVS : null;
     EVS = { ev: d.event, mine: d.mine, opt: keep && keep.opt, size: keep && keep.size, editing: keep && keep.editing };
     S.boot.mine[id] = d.mine || undefined; if (!d.mine) delete S.boot.mine[id];
