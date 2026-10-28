@@ -18,8 +18,8 @@ function showLogin() {
     '<div id="heroev"></div></div><div class="foot">© ' + (new Date().getFullYear() + 543) + ' ฝ่ายทรัพยากรบุคคล โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา สภากาชาดไทย</div></section>' +
     '<section class="panel"><form class="box" id="loginForm" autocomplete="on" novalidate>' +
     '<h2>เข้าสู่ระบบ</h2><p class="sub">ใช้รหัสพนักงาน และเลขบัตรประชาชน 13 หลักของท่าน</p>' +
-    '<div class="field"><label class="f" for="lgEmp">รหัสพนักงาน</label><input class="input" id="lgEmp" name="username" inputmode="numeric" autocomplete="username" placeholder="เช่น 5660101" maxlength="10" required></div>' +
-    '<div class="field"><label class="f" for="lgCid">เลขบัตรประชาชน (รหัสผ่าน)</label><div class="pin"><input class="input" id="lgCid" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="x-xxxx-xxxxx-xx-x" maxlength="17" required>' +
+    '<div class="field"><label class="f" for="lgEmp">รหัสพนักงาน</label><input class="input" id="lgEmp" name="username" inputmode="numeric" autocomplete="username" placeholder="เช่น 5660101" required></div>' +
+    '<div class="field"><label class="f" for="lgCid">เลขบัตรประชาชน (รหัสผ่าน)</label><div class="pin"><input class="input" id="lgCid" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="ตัวเลข 13 หลัก ไม่ต้องใส่ขีด" pattern="[0-9]*" required>' +
     '<button type="button" class="iconbtn eye" id="lgEye" aria-label="แสดงเลขบัตร">' + ic('eye') + '</button></div><div class="hint" id="lgHint"></div></div>' +
     '<div id="lgErr" class="hide" style="background:var(--danger-soft);color:var(--danger);border-radius:12px;padding:10px 13px;font-size:14px;margin-bottom:14px;display:flex;gap:8px"></div>' +
     '<button class="btn primary lg block" id="lgBtn" data-busy="กำลังตรวจสอบกับระบบบุคลากร…">' + ic('key') + 'เข้าสู่ระบบ</button>' +
@@ -28,15 +28,24 @@ function showLogin() {
     '<div class="ver">v' + HRC_VERSION + ' · ' + HRC_BUILD + '</div></form></section></div>';
 
   var emp = $('#lgEmp'), cid = $('#lgCid');
-  emp.addEventListener('input', function () { emp.value = emp.value.replace(/\D/g, ''); });
+  // กรองเฉพาะตัวเลข โดยไม่ใส่ขีดอัตโนมัติ (ใส่ขีดทำให้เคอร์เซอร์กระโดด) — แก้ค่าเฉพาะเมื่อมีอักขระที่ไม่ใช่ตัวเลข และคงตำแหน่งเคอร์เซอร์
+  function digitsOnly(el, max) {
+    var v = el.value, clean = v.replace(/\D/g, '').slice(0, max);
+    if (v === clean) return;
+    var pos = el.selectionStart || 0, removed = v.slice(0, pos).replace(/\d/g, '').length;
+    el.value = clean;
+    try { var p = Math.max(0, Math.min(clean.length, pos - removed)); el.setSelectionRange(p, p); } catch (e) { }
+  }
+  emp.addEventListener('input', function () { digitsOnly(emp, 10); });
   cid.addEventListener('input', function () {
-    var pos = cid.selectionStart, before = cid.value.length;
-    cid.value = fmtCid(cid.value);
-    if (cid.selectionEnd === before) cid.setSelectionRange(cid.value.length, cid.value.length); else cid.setSelectionRange(pos, pos);
-    var d = cid.value.replace(/\D/g, '');
-    $('#lgHint').innerHTML = d.length === 13 && !cidOk(d) ? '<span style="color:var(--warn)">' + ic('alert') + ' เลขบัตรอาจพิมพ์ผิด กรุณาตรวจสอบ</span>' : '';
+    digitsOnly(cid, 13);
+    var d = cid.value, hint = $('#lgHint');
+    if (!d) { hint.innerHTML = ''; return; }
+    var grp = fmtCid(d);
+    hint.innerHTML = '<span class="num">' + d.length + '/13 หลัก</span>' + (cid.type === 'text' ? ' · <span class="num">' + esc(grp) + '</span>' : '') +
+      (d.length === 13 && !cidOk(d) ? ' · <span style="color:var(--warn)">' + ic('alert') + ' เลขบัตรอาจพิมพ์ผิด กรุณาตรวจสอบ</span>' : (d.length === 13 ? ' · <span style="color:var(--ok)">' + ic('check') + ' ครบ</span>' : ''));
   });
-  $('#lgEye').onclick = function () { var s = cid.type === 'password'; cid.type = s ? 'text' : 'password'; this.innerHTML = ic(s ? 'eyeoff' : 'eye'); };
+  $('#lgEye').onclick = function () { var s = cid.type === 'password'; cid.type = s ? 'text' : 'password'; this.innerHTML = ic(s ? 'eyeoff' : 'eye'); cid.dispatchEvent(new Event('input')); };
   try { var last = localStorage.getItem('hrc_lastemp'); if (last) { emp.value = last; setTimeout(function () { cid.focus(); }, 50); } else setTimeout(function () { emp.focus(); }, 50); } catch (e) { }
 
   rawCall('branding', {}).then(function (r) {

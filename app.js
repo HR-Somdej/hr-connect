@@ -1,6 +1,6 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-28.1';
+var HRC_BUILD = '2569-10-28.2';
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };

@@ -481,6 +481,19 @@ function editEvent(id) {
       $$('[data-delsize]').forEach(function (b) { b.onclick = function () { readForm(); var p = b.dataset.delsize.split(':'); ED.config.options[+p[0]].sizes.splice(+p[1], 1); draw(); }; });
       $$('[data-mv]').forEach(function (b) { b.onclick = function () { readForm(); var p = b.dataset.mv.split(':'), arr = ED.config.options[+p[0]].sizes, i = +p[1], j = i + (+p[2]); if (j < 0 || j >= arr.length) return; var t = arr[i]; arr[i] = arr[j]; arr[j] = t; draw(); }; });
       $$('[data-delopt]').forEach(function (b) { b.onclick = function () { readForm(); ED.config.options.splice(+b.dataset.delopt, 1); draw(); }; });
+      var imgIn = $('#imgIn');
+      if (imgIn) {
+        var pv = function () {
+          var src = imgIn.value.trim(), meta = $('#imgMeta');
+          ['#imgPv1', '#imgPv2'].forEach(function (k) { var im = $(k); im.style.display = src ? '' : 'none'; if (src) im.src = src; });
+          if (!src) { meta.textContent = 'ไม่มีรูป — การ์ดจะแสดงเป็นแถบสีประจำกิจกรรม'; return; }
+          var t = new Image();
+          t.onload = function () { var w = t.naturalWidth, h = t.naturalHeight, r = w / h; meta.innerHTML = 'ขนาด ' + w + '×' + h + ' px · ' + (w < 900 ? '<span style="color:var(--warn)">ภาพเล็ก อาจไม่คมบนจอใหญ่ (แนะนำกว้าง 1,200–1,600 px)</span>' : '<span style="color:var(--ok)">ความละเอียดเหมาะสม</span>') + (r < 1.2 ? ' · <span style="color:var(--warn)">ภาพแนวตั้ง จะเหลือขอบซ้าย-ขวา (แนะนำภาพแนวนอน ~2:1)</span>' : ''); };
+          t.onerror = function () { meta.innerHTML = '<span style="color:var(--danger)">' + ic('alert') + ' โหลดรูปไม่ได้ — ตรวจชื่อไฟล์ (ตัวพิมพ์เล็ก/ใหญ่ต้องตรง) หรือรอ GitHub อัปเดต 1–2 นาที</span>'; };
+          t.src = src;
+        };
+        imgIn.oninput = debounce(pv, 400); pv();
+      }
       var ao = $('#addOpt'); if (ao) ao.onclick = function () { readForm(); ED.config.options.push({ key: 'X' + ED.config.options.length, label: 'แบบใหม่', sizes: [{ code: 'S', chest: '', length: '' }] }); draw(); };
       $('#evSave').onclick = function () {
         readForm();
@@ -497,7 +510,10 @@ function editEvent(id) {
 }
 function choiceEditor(c) {
   return '<div class="card"><div class="hd"><h3>รายการ / ไซซ์</h3><button class="btn sm" id="addOpt">' + ic('plus') + 'เพิ่มแบบ</button></div><div class="bd">' +
-    '<div class="grid2"><div class="field"><label class="f">ชื่อสิ่งของ</label><input class="input" data-c="itemName" value="' + esc(c.itemName || '') + '"></div><div class="field"><label class="f">ไฟล์รูป (ในหน้าเว็บ) หรือ URL</label><input class="input" data-c="image" value="' + esc(c.image || '') + '"></div></div>' +
+    '<div class="grid2"><div class="field"><label class="f">ชื่อสิ่งของ</label><input class="input" data-c="itemName" value="' + esc(c.itemName || '') + '"></div><div class="field"><label class="f">ไฟล์รูป (ในหน้าเว็บ) หรือ URL</label><input class="input" data-c="image" id="imgIn" value="' + esc(c.image || '') + '"><div class="hint">อัปโหลดรูปขึ้น GitHub (repo hr-connect) แล้วพิมพ์ชื่อไฟล์ที่นี่</div></div></div>' +
+    '<div class="imgprev"><div class="box"><small>ตัวอย่าง: การ์ดหน้าแรก (ภาพแสดงเต็ม ไม่ตัดขอบ)</small><div class="frame" style="height:120px"><img id="imgPv1" alt=""></div></div>' +
+    '<div class="box"><small>ตัวอย่าง: หน้ากิจกรรม (กดขยายดูเต็มได้)</small><div class="frame" style="height:120px"><img id="imgPv2" alt=""></div></div>' +
+    '<div class="meta muted" id="imgMeta" style="grid-column:1/-1"></div></div>' +
     (c.options || []).map(function (o, oi) {
       return '<div data-oi="' + oi + '" style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px"><div class="row" style="margin-bottom:8px"><input class="input" data-ol value="' + esc(o.label) + '" style="flex:1;min-width:140px" placeholder="ชื่อแบบ"><input class="input" data-ok value="' + esc(o.key) + '" style="width:80px" placeholder="รหัส" title="รหัสแบบ (ห้ามเปลี่ยนเมื่อมีคนจองแล้ว)"><button class="iconbtn" data-delopt="' + oi + '" title="ลบแบบ">' + ic('trash') + '</button></div>' +
         '<div class="tablewrap"><table class="t sizeeditor"><thead><tr><th>ไซซ์</th><th>อก (นิ้ว)</th><th>ยาว (นิ้ว)</th><th>หมายเหตุ</th><th title="ซ่อนจากผู้ใช้">ซ่อน</th><th></th></tr></thead><tbody>' +
