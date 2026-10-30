@@ -1,6 +1,6 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-29.1';
+var HRC_BUILD = '2569-10-30.1';
 var HRC_API_BUILD = '2569-10-29.1';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
 var HRC_VERSION = '1.2569';
 
@@ -243,7 +243,7 @@ function exportXlsx(filename, sheets) {
     toast('ดาวน์โหลด ' + filename, 'ok', 'ส่งออกไฟล์แล้ว');
   });
 }
-/** อ่านไฟล์ Excel/CSV → [{header: value}] ของชีทแรก */
+/** อ่านไฟล์ Excel/CSV → [{header: value}] ของชีทที่มีคอลัมน์รหัสพนักงาน (ไม่พบ = ชีทแรก) */
 function readSheetFile(file) {
   return loadXLSX().then(function (X) {
     return new Promise(function (res, rej) {
@@ -251,8 +251,23 @@ function readSheetFile(file) {
       fr.onload = function () {
         try {
           var wb = X.read(new Uint8Array(fr.result), { type: 'array', cellDates: false, raw: false });
-          var ws = wb.Sheets[wb.SheetNames[0]];
-          res(X.utils.sheet_to_json(ws, { defval: '', raw: false }));
+          // เลือกชีทที่มีหัวคอลัมน์รหัสพนักงาน (ไฟล์อาจมีแผ่น "อ่านก่อน" อยู่หน้าแรก) และหาแถวหัวตารางใน 15 แถวแรก
+          var KEY = /^(empcode|emp code|รหัสพนักงาน|รหัสประจำตัว|เลขประจำตัวบุคลากร|รหัส)$/i, pick = null;
+          wb.SheetNames.some(function (n) {
+            var aoa = X.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: false, blankrows: false });
+            for (var i = 0; i < Math.min(15, aoa.length); i++) {
+              if ((aoa[i] || []).some(function (c) { return KEY.test(String(c).replace(/\s+/g, ' ').trim()); })) { pick = { ws: wb.Sheets[n], row: i }; return true; }
+            }
+            return false;
+          });
+          if (!pick) pick = { ws: wb.Sheets[wb.SheetNames[0]], row: 0 };
+          var rng = X.utils.decode_range(pick.ws['!ref'] || 'A1'), hdr = 0;
+          // หาแถวหัวตารางจริงตามตำแหน่งในชีท (blankrows:false ข้ามแถวว่าง จึงนับใหม่จากเซลล์จริง)
+          for (var r = rng.s.r, seen = -1; r <= rng.e.r; r++) {
+            var any = false; for (var c = rng.s.c; c <= rng.e.c; c++) { var cell = pick.ws[X.utils.encode_cell({ r: r, c: c })]; if (cell && String(cell.v).trim() !== '') { any = true; break; } }
+            if (any && ++seen === pick.row) { hdr = r; break; }
+          }
+          res(X.utils.sheet_to_json(pick.ws, { defval: '', raw: false, range: hdr }));
         } catch (e) { rej(new Error('อ่านไฟล์ไม่ได้: ' + e.message)); }
       };
       fr.onerror = function () { rej(new Error('อ่านไฟล์ไม่ได้')); };
