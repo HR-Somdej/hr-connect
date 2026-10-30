@@ -93,7 +93,7 @@ function drawLoginForm() {
   if (LG.brand && LG.brand.lineUrl) { HELPC.lineUrl = LG.brand.lineUrl; }
   var m = LG.mode, box = $('#lgBox');
   box.innerHTML = '<form id="loginForm" autocomplete="on" novalidate>' +
-    '<h2>เข้าสู่ระบบ</h2><p class="sub">' + (m === 'pw' ? 'ใช้รหัสพนักงาน และรหัสผ่านที่ท่านตั้งไว้' : 'ยังไม่เคยตั้งรหัสผ่าน ใช้รหัสพนักงานและเลขบัตรประชาชน 13 หลัก') + '</p>' +
+    (/^#\/checkin\//.test(location.hash) ? '<div class="announce" style="margin-bottom:12px">' + ic('qr') + '<div><b>เช็กอิน Hospital Town Hall</b><br>เข้าสู่ระบบแล้วระบบจะเช็กอินให้อัตโนมัติ · หากแจ้งว่า QR หมดอายุ ให้สแกนจากจออีกครั้ง</div></div>' : '') + '<h2>เข้าสู่ระบบ</h2><p class="sub">' + (m === 'pw' ? 'ใช้รหัสพนักงาน และรหัสผ่านที่ท่านตั้งไว้' : 'ยังไม่เคยตั้งรหัสผ่าน ใช้รหัสพนักงานและเลขบัตรประชาชน 13 หลัก') + '</p>' +
     '<div class="seg lgtabs" role="tablist"><button type="button" role="tab" class="' + (m === 'pw' ? 'on' : '') + '" data-lm="pw">' + ic('key') + 'รหัสผ่าน</button><button type="button" role="tab" class="' + (m === 'cid' ? 'on' : '') + '" data-lm="cid">' + ic('user') + 'เข้าครั้งแรก (เลขบัตร)</button></div>' +
     '<div class="field"><label class="f" for="lgEmp">รหัสพนักงาน</label><input class="input" id="lgEmp" name="username" inputmode="numeric" autocomplete="username" placeholder="เลขประจำตัวบุคลากร 7 หลัก เช่น 5XXXXXX" required></div>' +
     (m === 'pw'
@@ -353,6 +353,7 @@ function orderStateHtml(ev) {
   return '<span class="chip ok">' + ic('check') + ' ชำระแล้ว ' + x.qty + ' ตัว</span>';
 }
 function evCard(ev) {
+  if (isTh(ev)) return thCard(ev);
   var r = S.boot.mine[ev.id], cfg = ev.config || {}, left = daysLeft(ev.closeAt);
   if (ev.type === 'ORDER') {
     var x = (S.boot.orders || {})[ev.id], act = x && (x.unpaid || x.rejected);
@@ -385,13 +386,15 @@ ROUTES.event = function (params) {
     if (S.route !== 'event') return;
     if (d.event.type === 'ORDER') return loadOrders();
     var keep = EVS && EVS.ev.id === id ? EVS : null;
-    EVS = { ev: d.event, mine: d.mine, opt: keep && keep.opt, size: keep && keep.size, editing: keep && keep.editing, pick: keep && keep.pick };
+    EVS = { ev: d.event, mine: d.mine, opt: keep && keep.opt, size: keep && keep.size, editing: keep && keep.editing, pick: keep && keep.pick,
+      x: d, nm: keep && keep.nm, evalMode: keep && keep.evalMode, ans: keep && keep.ans };
     S.boot.mine[id] = d.mine || undefined; if (!d.mine) delete S.boot.mine[id];
     drawEvent();
   }).catch(function (e) { errToast(e, 'โหลดกิจกรรมไม่สำเร็จ'); if (!cached) $('#page').innerHTML = '<div class="card empty">' + ic('alert') + '<p>' + esc(e.message) + '</p><a class="btn" href="#/">กลับหน้าแรก</a></div>'; });
 };
 
 function drawEvent() {
+  if (isTh(EVS.ev)) return drawTh();
   if (EVS.ev.type === 'PICK') return drawPick();
   var ev = EVS.ev, cfg = ev.config || {}, mine = EVS.mine, open = ev.status === 'OPEN';
   setAccent(ev.color);

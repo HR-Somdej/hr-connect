@@ -1,7 +1,7 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-30.1';
-var HRC_API_BUILD = '2569-10-29.1';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
+var HRC_BUILD = '2569-10-31.1';
+var HRC_API_BUILD = '2569-10-31.1';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -32,7 +32,10 @@ function isSuper() { return hasRole('SUPER'); }
 function isHead() { return hasRole('HEAD'); }
 /** จัดการกิจกรรมนี้ได้ (ผู้ดูแลสูงสุด หรือ ผู้ดูแลที่ได้รับมอบหมายกิจกรรมนี้) */
 function canEv(id) { if (isSuper()) return true; if (!hasRole('ADMIN')) return false; var l = S.me.adminEvents || []; return l.indexOf('*') >= 0 || l.indexOf(id) >= 0; }
-var TYPE_TH = { CHOICE: 'เลือกแบบ + ไซซ์', PICK: 'เลือก 1 รายการ (ตามรายชื่อ)', ORDER: 'สั่งซื้อ + ชำระเงิน', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ' };
+var TYPE_TH = { CHOICE: 'เลือกแบบ + ไซซ์', PICK: 'เลือก 1 รายการ (ตามรายชื่อ)', ORDER: 'สั่งซื้อ + ชำระเงิน', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ',
+  NOMINATE: 'เสนอชื่อบุคลากรดีเด่น', QUESTION: 'ส่งคำถามถึงผู้บริหาร', CHECKIN: 'เช็กอิน + แบบประเมิน' };
+/** กิจกรรม Hospital Town Hall (มีหน้าเฉพาะใน pages-th.js) */
+function isTh(ev) { return !!ev && (ev.type === 'NOMINATE' || ev.type === 'QUESTION' || ev.type === 'CHECKIN'); }
 function setAccent(hex) {
   hex = hex || '#8E4B9D';
   var r = document.documentElement.style;
@@ -90,7 +93,15 @@ var ICONS = {
   up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
   cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   printer: '<path d="M6 9V2h12v7"/><rect x="2" y="9" width="20" height="9" rx="2"/><path d="M6 14h12v8H6z"/>',
-  building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>'
+  building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+  award: '<circle cx="12" cy="9" r="6"/><path d="m8.5 13.8-1.6 7.7L12 19l5.1 2.5-1.6-7.7"/><path d="m12 6 .9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
+  qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
+  tv: '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  merge: '<path d="M6 3v6a6 6 0 0 0 6 6h6"/><path d="m15 12 3 3-3 3"/><circle cx="6" cy="3" r="0.5"/>'
 };
 function ic(name, cls) { return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>'; }
 
@@ -98,7 +109,7 @@ function ic(name, cls) { return '<svg class="i ' + (cls || '') + '" viewBox="0 0
 var NET = { active: 0, queue: [], MAX: 4 };
 function netSlot() { return new Promise(function (res) { if (NET.active < NET.MAX) { NET.active++; res(); } else NET.queue.push(res); }); }
 function netDone() { var n = NET.queue.shift(); if (n) n(); else NET.active = Math.max(0, NET.active - 1); }
-function isRead(a) { return /^(get|list|bootstrap|branding|ping|lookup|preview|helpdeskLookup)/.test(a); }
+function isRead(a) { return /^(get|list|bootstrap|branding|ping|lookup|preview|helpdeskLookup|awardPoolInfo)/.test(a); }
 function fetchOnce(action, payload) {
   if (!window.API_URL || /ใส่ลิงก์/.test(window.API_URL)) return Promise.reject(new Error('ยังไม่ได้ตั้งค่า API_URL ในไฟล์ config.js'));
   return fetch(window.API_URL, { method: 'POST', redirect: 'follow', credentials: 'omit', cache: 'no-store',
@@ -315,7 +326,7 @@ function render() {
 function defaultEventId() { var ev = (S.boot.events || [])[0]; return ev ? ev.id : ''; }
 function navEvents() {
   var list = (window.AD && AD.events) || S.boot.events || [];
-  if (!isSuper()) list = list.filter(function (e) { return e.type !== 'ORDER' || canEv(e.id); });
+  if (!isSuper()) list = list.filter(function (e) { return ['ORDER', 'QUESTION', 'CHECKIN'].indexOf(e.type) < 0 || canEv(e.id); });
   return list.filter(function (e) { return e.status !== 'CLOSED' || e.id === S.lastAdminEvent || list.length <= 6; }).slice(0, 12);
 }
 function navItems() {

@@ -2,20 +2,24 @@
 
 var AD = { events: null };
 var STATUS_TH = { ORDERED: 'จองแล้ว', DECLINED: 'ไม่ประสงค์', '': 'ยังไม่ตอบ' };
-function stTh(ev, st) { return st === 'ORDERED' && ev && ev.type === 'PICK' ? 'เลือกแล้ว' : STATUS_TH[st || '']; }
+function stTh(ev, st) {
+  if (st === 'ORDERED' && ev) { if (ev.type === 'PICK') return 'เลือกแล้ว'; if (ev.type === 'NOMINATE') return 'เสนอชื่อแล้ว'; if (ev.type === 'CHECKIN') return 'เช็กอินแล้ว'; }
+  if (!st && ev && ev.type === 'CHECKIN') return 'ยังไม่เข้าร่วม';
+  return STATUS_TH[st || ''];
+}
 var FLAG_TH = { NEW_API: 'พบใหม่จาก API', NOT_IN_API: 'ไม่พบใน API', MANUAL: 'เพิ่มเอง' };
 function pickItems(ev) { var m = {}; ((ev.config || {}).items || []).forEach(function (it) { m[it.key] = it; }); return m; }
-var MAIL_TH = { REMIND_STAFF: 'เตือนบุคลากรที่ยังไม่ตอบ', HEAD_SUMMARY: 'สรุปถึงหัวหน้าฝ่าย/หน่วย', ADMIN_SUMMARY: 'สรุปภาพรวมถึงผู้ดูแล', CONFIRM: 'ยืนยันการบันทึกถึงบุคลากร' };
+var MAIL_TH = { ANNOUNCE: 'ประกาศเปิดกิจกรรมถึงทุกคน', REMIND_STAFF: 'เตือนบุคลากรที่ยังไม่ตอบ', HEAD_SUMMARY: 'สรุปถึงหัวหน้าฝ่าย/หน่วย', ADMIN_SUMMARY: 'สรุปภาพรวมถึงผู้ดูแล', CONFIRM: 'ยืนยันการบันทึกถึงบุคลากร' };
 
 function needAdmin() { if (!isAdmin()) { $('#page').innerHTML = '<div class="card empty">' + ic('shield') + '<p>เฉพาะผู้ดูแลระบบ</p></div>'; return false; } return true; }
 function needSuper() { if (!isSuper()) { $('#page').innerHTML = '<div class="card empty">' + ic('shield') + '<p>เมนูนี้สำหรับผู้ดูแลสูงสุดเท่านั้น</p></div>'; return false; } return true; }
 function needViewer() { if (!isAdmin() && !isHead()) { $('#page').innerHTML = '<div class="card empty">' + ic('shield') + '<p>เฉพาะผู้ดูแลระบบและหัวหน้าฝ่าย/หน่วย</p></div>'; return false; } return true; }
 function loadEvents(force) {
-  if (!isAdmin()) return Promise.resolve(AD.events = S.boot.events || []);
+  if (!isAdmin()) return Promise.resolve(AD.events = (S.boot.events || []).filter(function (e) { return ['ORDER', 'QUESTION', 'CHECKIN'].indexOf(e.type) < 0; }));
   if (AD.events && !force) return Promise.resolve(AD.events);
   return api('listEvents', {}).then(function (l) {
     // ผู้ดูแลกิจกรรมที่เป็นหัวหน้าด้วย: เห็นกิจกรรมอื่นในฐานะหัวหน้า (ดูอย่างเดียว)
-    if (isHead() && !isSuper()) (S.boot.events || []).forEach(function (e) { if (e.type !== 'ORDER' && !l.some(function (x) { return x.id === e.id; })) l.push(e); });
+    if (isHead() && !isSuper()) (S.boot.events || []).forEach(function (e) { if (['ORDER', 'QUESTION', 'CHECKIN'].indexOf(e.type) < 0 && !l.some(function (x) { return x.id === e.id; })) l.push(e); });
     AD.events = l; return l;
   });
 }
@@ -227,7 +231,7 @@ function drawTracking() {
     [['all', 'ทั้งหมด', cnt.all], ['pending', 'ยังไม่ตอบ', cnt.pending], ['ordered', stTh(TR.ev, 'ORDERED'), cnt.ordered], ['declined', 'ไม่ประสงค์', cnt.declined]].map(function (s) { return '<button class="' + (f.status === s[0] ? 'on' : '') + '" data-st="' + s[0] + '">' + s[1] + '<span class="c num">' + nf(s[2]) + '</span></button>'; }).join('') +
     '</div><div class="row">' + (admin ? piiBtn() : '') + '<button class="btn sm" id="tExport">' + ic('download') + 'ส่งออกที่กรอง</button>' +
     (admin ? '<button class="btn sm" id="tPhones">' + ic('phone') + 'คัดลอกเบอร์ผู้ยังไม่ตอบ</button><button class="btn sm primary" id="tRemind">' + ic('mail') + 'อีเมลเตือนผู้ยังไม่ตอบ</button>' : '') + '</div></div></div>' +
-    (admin && (d.event.config || {}).allowDecline !== false ? '<div class="bulkbar" id="tBulk"></div>' : '') +
+    (admin && !isTh(d.event) && (d.event.config || {}).allowDecline !== false ? '<div class="bulkbar" id="tBulk"></div>' : '') +
     '<div id="tTable"></div></div>';
   $('#page').innerHTML = h;
   S.piiRedraw = drawTrackTable;
@@ -253,9 +257,11 @@ function sel(id, all, list, cur) { return '<select class="input" id="' + id + '"
 function statusChip(r) {
   if (r.status === 'ORDERED') return '<span class="chip ok">' + ic('check') + ' ' + stTh(TR && TR.ev, 'ORDERED') + '</span>';
   if (r.status === 'DECLINED') return '<span class="chip">ไม่ประสงค์</span>';
-  return r.target ? '<span class="chip warn dot">ยังไม่ตอบ</span>' : '<span class="chip">นอกเป้าหมาย</span>';
+  return r.target ? '<span class="chip warn dot">' + (TR && TR.ev && TR.ev.type === 'CHECKIN' ? 'ยังไม่เข้าร่วม' : TR && TR.ev && TR.ev.type === 'NOMINATE' ? 'ยังไม่เสนอชื่อ' : 'ยังไม่ตอบ') + '</span>' : '<span class="chip">นอกเป้าหมาย</span>';
 }
 function sizeTxt(r) {
+  if (TR.ev.type === 'NOMINATE') return r.status === 'ORDERED' ? '<span class="small">เสนอ <b>' + nf(r.qty) + '</b> ชื่อ</span>' : '<span class="muted">–</span>';
+  if (TR.ev.type === 'CHECKIN') return r.status === 'ORDERED' ? '<span class="small">' + (r.note === 'DESK' ? 'โต๊ะลงทะเบียน' : 'สแกน QR') + '</span>' : '<span class="muted">–</span>';
   if (TR.ev.type === 'PICK') {
     var IT = pickItems(TR.ev), opts = String(r.opts || '').split(',').filter(Boolean);
     if (r.status === 'ORDERED') return '<b class="small">' + esc(IT[r.optKey] ? IT[r.optKey].label : r.optKey) + '</b>';
@@ -275,12 +281,12 @@ function drawTrackTable() {
         '<td>' + esc(r.position) + '<div class="sub">' + esc(r.group) + '</div></td><td>' + esc(r.unit || '-') + '<div class="sub">' + esc(r.division) + (r.hrmiDivision && r.hrmiDivision !== r.division ? ' <span title="ฝ่ายต้นสังกัดตาม HRMi">(HRMi: ' + esc(r.hrmiDivision) + ')</span>' : '') + '</div></td>' +
         '<td>' + statusChip(r) + (r.byAdmin ? '<div class="sub">HR บันทึกแทน</div>' : '') + (r.updatedAt ? '<div class="sub">' + esc(thShort(r.updatedAt)) + '</div>' : '') + '</td><td>' + sizeTxt(r) + '</td>' +
         (admin ? '<td>' + (r.phone ? pii(r.phone, 'tel') : '<span class="muted small">ไม่มีเบอร์</span>') + (r.extPhone ? ' <span class="sub">ต่อ ' + esc(r.extPhone) + '</span>' : '') + (r.email ? '<div class="sub">' + pii(r.email, 'email') + '</div>' : '') + '</td>' +
-          '<td class="r" style="white-space:nowrap"><button class="btn sm" data-proxy="' + esc(r.empCode) + '">' + ic('edit') + (r.status ? 'แก้แทน' : 'บันทึกแทน') + '</button> <button class="iconbtn" data-hist="' + esc(r.empCode) + '" title="ประวัติ">' + ic('history') + '</button></td>' : '') + '</tr>';
+          '<td class="r" style="white-space:nowrap">' + (isTh(TR.ev) ? '' : '<button class="btn sm" data-proxy="' + esc(r.empCode) + '">' + ic('edit') + (r.status ? 'แก้แทน' : 'บันทึกแทน') + '</button> ') + '<button class="iconbtn" data-hist="' + esc(r.empCode) + '" title="ประวัติ">' + ic('history') + '</button></td>' : '') + '</tr>';
     }).join('') : '<tr><td colspan="7"><div class="empty">' + ic('search') + '<p>ไม่พบรายชื่อตามเงื่อนไข</p></div></td></tr>') + '</tbody></table>' +
     '<div class="mlist">' + slice.map(function (r) {
       return '<div class="mi"><div class="avatar" style="width:36px;height:36px;font-size:14px">' + esc(initials(r.name)) + '</div><div class="x"><b>' + esc(r.name) + '</b><small>' + esc(r.empCode + ' · ' + r.position) + '</small><small>' + esc(r.unit || r.division) + '</small>' +
         '<div class="row" style="margin-top:5px">' + (canBulk && selectable(r) ? '<label class="chip"><input type="checkbox" data-sel="' + esc(r.empCode) + '" ' + (TR.sel[r.empCode] ? 'checked' : '') + '> เลือก</label>' : '') + statusChip(r) + (r.status === 'ORDERED' ? '<span class="chip acc" style="white-space:normal">' + (TR.ev.type === 'PICK' ? esc((pickItems(TR.ev)[r.optKey] || {}).label || r.optKey) : esc(r.optKey + ' · ' + r.sizeCode)) + '</span>' : '') + '</div></div>' +
-        (admin ? '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' + (r.phone ? '<a class="btn sm" href="tel:' + esc(r.phone) + '">' + ic('phone') + '</a>' : '') + '<button class="btn sm" data-proxy="' + esc(r.empCode) + '">' + ic('edit') + '</button></div>' : '') + '</div>';
+        (admin ? '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' + (r.phone ? '<a class="btn sm" href="tel:' + esc(r.phone) + '">' + ic('phone') + '</a>' : '') + (isTh(TR.ev) ? '' : '<button class="btn sm" data-proxy="' + esc(r.empCode) + '">' + ic('edit') + '</button>') + '</div>' : '') + '</div>';
     }).join('') + '</div></div>' +
     '<div class="pager"><span>แสดง ' + (list.length ? ((TR.page - 1) * TR.size + 1) + '–' + Math.min(list.length, TR.page * TR.size) : 0) + ' จาก ' + nf(list.length) + ' คน</span><div class="row">' +
     '<button class="btn sm" id="pPrev" ' + (TR.page <= 1 ? 'disabled' : '') + '>' + ic('arrowl') + '</button><span class="num">หน้า ' + TR.page + '/' + pages + '</span><button class="btn sm" id="pNext" ' + (TR.page >= pages ? 'disabled' : '') + '>' + ic('arrowr') + '</button></div></div>';
@@ -454,7 +460,14 @@ ROUTES['admin/mail'] = function (params) {
 function drawMail(id) {
   var ev = AD.events.filter(function (e) { return e.id === id; })[0], mc = ev.mail || {};
   var days = mc.days || [];
-  var cards = ev.type === 'ORDER' ? [['CONFIRM', 'check', 'แจ้งสถานะคำสั่งซื้ออัตโนมัติ', 'ส่งถึงผู้สั่ง (ถ้ามีอีเมลใน HR) เมื่อ: รับคำสั่งซื้อ · ยืนยันชำระ · ตีกลับสลิป · เปลี่ยนสถานะจัดส่ง (เมื่อติ๊ก "แจ้งทางอีเมล")', 'confirm', false]] : [
+  if (ev.type === 'CHECKIN') { $('#page').innerHTML = pageHead('อีเมล', esc(ev.title)) + '<div class="card pad empty">' + ic('mail') + '<p>กิจกรรมเช็กอินไม่ส่งอีเมล · ประกาศงานรวมอยู่ในอีเมลประกาศของกิจกรรมเสนอชื่อ</p></div>'; return; }
+  var th = isTh(ev), ANN = ['ANNOUNCE', 'send', 'ประกาศเปิดกิจกรรมถึงบุคลากรทุกคน', 'ส่งครั้งเดียวถึงทุกคนที่มีอีเมล รวมทุกกิจกรรม Town Hall ในฉบับเดียว · โควตาไม่พอระบบส่งต่อวันถัดไปจนครบ (ไม่ส่งซ้ำคนเดิม)', 'announce', true];
+  var cards = ev.type === 'NOMINATE' ? [['CONFIRM', 'check', 'ยืนยันการเสนอชื่อถึงผู้เสนอ', 'ส่งทันทีเมื่อบันทึก/แก้ไข แสดงรายชื่อที่ท่านเสนอ (เห็นเฉพาะเจ้าของอีเมล)', 'confirm', false], ANN,
+      ['REMIND_STAFF', 'alert', 'เตือนผู้ที่ยังไม่เสนอชื่อ', 'ส่งรายบุคคลถึงผู้ที่ยังไม่เสนอชื่อ ตามวันก่อนปิดรับที่ตั้งไว้ด้านล่าง', 'remindStaff', true],
+      ['HEAD_SUMMARY', 'building', 'สรุปถึงหัวหน้าฝ่าย/หน่วย', 'ร้อยละการมีส่วนร่วมในสังกัด (ไม่แสดงว่าใครเสนอชื่อใคร)', 'headSummary', true],
+      ['ADMIN_SUMMARY', 'chart', 'สรุปภาพรวมถึงผู้ดูแล', 'ตัวเลขการมีส่วนร่วมรวม', 'adminSummary', true]]
+    : ev.type === 'QUESTION' ? [ANN, ['REMIND_STAFF', 'alert', 'เชิญชวนส่งคำถาม (ก่อนปิดรับ)', 'ส่งถึงบุคลากรทุกคนที่มีอีเมล ตามวันก่อนปิดรับที่ตั้งไว้ด้านล่าง', 'remindStaff', true]]
+    : ev.type === 'ORDER' ? [['CONFIRM', 'check', 'แจ้งสถานะคำสั่งซื้ออัตโนมัติ', 'ส่งถึงผู้สั่ง (ถ้ามีอีเมลใน HR) เมื่อ: รับคำสั่งซื้อ · ยืนยันชำระ · ตีกลับสลิป · เปลี่ยนสถานะจัดส่ง (เมื่อติ๊ก "แจ้งทางอีเมล")', 'confirm', false]] : [
     ['CONFIRM', 'check', 'ยืนยันการบันทึกถึงบุคลากร', 'ส่งทันทีที่บุคลากรบันทึก/แก้ไข พร้อมรายละเอียดที่เลือก (เฉพาะผู้มีอีเมล)', 'confirm', false],
     ['REMIND_STAFF', 'alert', 'เตือนบุคลากรที่ยังไม่ตอบ', 'ส่งรายบุคคลถึงผู้ที่ยังไม่บันทึก พร้อมปุ่มเข้าระบบ (ครั้งละไม่เกิน 400 ฉบับ)', 'remindStaff', true],
     ['HEAD_SUMMARY', 'building', 'สรุปถึงหัวหน้าฝ่าย/หน่วย', 'รายชื่อผู้ที่ยังไม่ตอบในสังกัด + ความคืบหน้า (ส่งตามรอบเฉพาะสังกัดที่ยังค้าง)', 'headSummary', true],
@@ -469,7 +482,7 @@ function drawMail(id) {
   else h += '<div class="card" style="margin-top:18px"><div class="hd"><h3>' + ic('calendar') + ' รอบส่งอัตโนมัติ</h3><button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกการตั้งค่า</button></div><div class="bd"><div class="grid3">' +
     '<div class="field"><label class="f">วันที่ส่ง</label><div class="daypick">' + TH_DAY.map(function (d, i) { return '<label><input type="checkbox" data-day="' + i + '" ' + (days.indexOf(i) >= 0 ? 'checked' : '') + '><span>' + d + '</span></label>'; }).join('') + '</div></div>' +
     '<div class="field"><label class="f">เวลา (ประมาณ)</label><select class="input" id="mHour">' + [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map(function (x) { return '<option value="' + x + '" ' + ((mc.hour == null ? 9 : +mc.hour) === x ? 'selected' : '') + '>' + x + ':00 น.</option>'; }).join('') + '</select><div class="hint">ระบบตรวจทุกชั่วโมง ส่งในชั่วโมงนั้น</div></div>' +
-    '<div class="field"><label class="f">ส่งเพิ่มก่อนปิดรับ</label><select class="input" id="mBefore">' + [0, 1, 2, 3, 5, 7].map(function (x) { return '<option value="' + x + '" ' + ((+mc.beforeCloseDays || 0) === x ? 'selected' : '') + '>' + (x ? x + ' วันก่อนปิด' : 'ไม่ส่ง') + '</option>'; }).join('') + '</select></div></div>' +
+    (th ? '<div class="field"><label class="f">ส่งก่อนปิดรับ (วัน · คั่นด้วย ,)</label><input class="input" id="mBefore" value="' + esc(mc.beforeCloseDays == null ? '' : mc.beforeCloseDays) + '" placeholder="เช่น 3,1"><div class="hint">3,1 = ส่ง 3 วันและ 1 วันก่อนปิด · ว่าง = ไม่ส่ง</div></div>' + (mc.announce != null || ev.type === 'NOMINATE' ? '<div class="field"><label class="f">เวลาส่งอีเมลประกาศ</label><input class="input" type="datetime-local" id="mAnnAt" value="' + esc(String(mc.announceAt || '').slice(0, 16)) + '"><div class="hint">ส่งเมื่อถึงเวลานี้และกิจกรรมเปิดรับแล้ว</div></div>' : '') : '<div class="field"><label class="f">ส่งเพิ่มก่อนปิดรับ</label><select class="input" id="mBefore">' + [0, 1, 2, 3, 5, 7].map(function (x) { return '<option value="' + x + '" ' + ((+mc.beforeCloseDays || 0) === x ? 'selected' : '') + '>' + (x ? x + ' วันก่อนปิด' : 'ไม่ส่ง') + '</option>'; }).join('') + '</select></div>') + '</div>' +
     '<div class="small muted">' + ic('info') + ' ต้อง Run <b>installTriggers</b> ใน Apps Script หนึ่งครั้งเพื่อเปิดตัวตั้งเวลา · ส่งจากบัญชีที่ Deploy (Workspace ~1,500 ฉบับ/วัน) · หัวหน้าต้องมีอีเมลในเมนู "หัวหน้าฝ่าย/หน่วย"</div></div></div>';
   h += '<div class="card" style="margin-top:18px"><div class="hd"><h3>' + ic('history') + ' บันทึกการส่ง</h3><button class="btn sm" id="mLogR">' + ic('refresh') + '</button></div><div id="mLog">' + skel(1) + '</div></div>';
   $('#page').innerHTML = h;
@@ -508,7 +521,8 @@ function drawMail(id) {
     var mail = Object.assign({}, mc);
     $$('[data-auto]').forEach(function (c) { mail[c.dataset.auto] = c.checked; });
     mail.days = $$('[data-day]').filter(function (c) { return c.checked; }).map(function (c) { return +c.dataset.day; });
-    mail.hour = +$('#mHour').value; mail.beforeCloseDays = +$('#mBefore').value;
+    mail.hour = +$('#mHour').value; mail.beforeCloseDays = th ? $('#mBefore').value.replace(/[^\d,]/g, '') : +$('#mBefore').value;
+    if ($('#mAnnAt')) mail.announceAt = $('#mAnnAt').value;
     var e2 = Object.assign({}, ev, { mail: mail });
     busy(this, api('saveEvent', { event: e2 })).then(function () { ev.mail = mail; toast('บันทึกการตั้งค่าอีเมลแล้ว', 'ok'); }).catch(errToast);
   };
@@ -561,7 +575,7 @@ function editEvent(id) {
         '<div class="field"><label class="f">ชื่อกิจกรรม *</label><input class="input" data-k="title" value="' + esc(ED.title) + '"></div>' +
         '<div class="field"><label class="f">คำอธิบายย่อ (บรรทัดรอง)</label><input class="input" data-k="subtitle" value="' + esc(ED.subtitle || '') + '"></div>' +
         '<div class="field"><label class="f">รายละเอียด</label><textarea class="input" data-k="description">' + esc(ED.description || '') + '</textarea></div>' +
-        '<div class="grid2"><div class="field"><label class="f">ชนิด</label><select class="input" data-k="type"' + (isNew ? '' : ' disabled') + '><option value="CHOICE">เลือกแบบ + ไซซ์ (ไม่เก็บเงิน)</option><option value="PICK" ' + (ED.type === 'PICK' ? 'selected' : '') + '>เลือก 1 รายการ ตามรายชื่อ (ตัวเลือกเฉพาะบุคคล เช่น ผ้า/ชุด)</option><option value="ORDER" ' + (ED.type === 'ORDER' ? 'selected' : '') + '>สั่งซื้อ + ชำระเงิน (QR พร้อมเพย์ + แนบสลิป)</option><option value="REGISTER" ' + (ED.type === 'REGISTER' ? 'selected' : '') + '>ลงทะเบียนเข้าร่วม (รุ่นถัดไป)</option><option value="REQUEST" ' + (ED.type === 'REQUEST' ? 'selected' : '') + '>คำขอ / ขอสิทธิ (รุ่นถัดไป)</option></select></div>' +
+        '<div class="grid2"><div class="field"><label class="f">ชนิด</label><select class="input" data-k="type"' + (isNew ? '' : ' disabled') + '><option value="CHOICE">เลือกแบบ + ไซซ์ (ไม่เก็บเงิน)</option><option value="PICK" ' + (ED.type === 'PICK' ? 'selected' : '') + '>เลือก 1 รายการ ตามรายชื่อ (ตัวเลือกเฉพาะบุคคล เช่น ผ้า/ชุด)</option><option value="ORDER" ' + (ED.type === 'ORDER' ? 'selected' : '') + '>สั่งซื้อ + ชำระเงิน (QR พร้อมเพย์ + แนบสลิป)</option><option value="REGISTER" ' + (ED.type === 'REGISTER' ? 'selected' : '') + '>ลงทะเบียนเข้าร่วม (รุ่นถัดไป)</option><option value="REQUEST" ' + (ED.type === 'REQUEST' ? 'selected' : '') + '>คำขอ / ขอสิทธิ (รุ่นถัดไป)</option>' + (isTh(ED) ? '<option value="' + ED.type + '" selected>' + esc(TYPE_TH[ED.type]) + '</option>' : '') + '</select></div>' +
         '<div class="field"><label class="f">สีประจำกิจกรรม</label><div class="colorpick">' + COLORS.map(function (x) { return '<button type="button" data-color="' + x + '" class="' + (x.toLowerCase() === String(ED.color).toLowerCase() ? 'on' : '') + '" style="background:' + x + '"></button>'; }).join('') + '</div></div></div>' +
         '<div class="grid2"><div class="field"><label class="f">เปิดรับ</label><input class="input" type="datetime-local" data-k="openAt" value="' + esc(dtLocal(ED.openAt)) + '"></div><div class="field"><label class="f">ปิดรับ</label><input class="input" type="datetime-local" data-k="closeAt" value="' + esc(dtLocal(ED.closeAt)) + '"><div class="hint">ขยายเวลาได้ตลอด · หลังปิดแอดมินยังบันทึกแทนได้</div></div></div>' +
         '<label class="switch"><input type="checkbox" id="evPub" ' + (ED.published ? 'checked' : '') + '><span class="tr"></span>เผยแพร่ (บุคลากรมองเห็น)</label></div></div>' +
@@ -569,10 +583,11 @@ function editEvent(id) {
         '<div id="audBox" style="margin-top:12px;' + (a.mode === 'FILTER' ? '' : 'display:none') + '"><div class="field"><label class="f">ฝ่าย (ชื่อเต็ม คั่นด้วยบรรทัด)</label><textarea class="input" data-a="divisions" placeholder="รพ.สมเด็จฯ - ฝ่ายการพยาบาล">' + esc((a.divisions || []).join('\n')) + '</textarea></div>' +
         '<div class="grid2"><div class="field"><label class="f">กลุ่มบุคลากร</label><textarea class="input" data-a="groups">' + esc((a.groups || []).join('\n')) + '</textarea></div><div class="field"><label class="f">ตำแหน่ง</label><textarea class="input" data-a="positions">' + esc((a.positions || []).join('\n')) + '</textarea></div></div>' +
         '<div class="field"><label class="f">รหัสพนักงานเพิ่มเติม (คั่นด้วย , หรือบรรทัด)</label><textarea class="input" data-a="codes">' + esc((a.codes || []).join('\n')) + '</textarea><div class="hint">เงื่อนไขต่างหมวดต้องตรงทุกข้อ · รหัสที่ระบุได้สิทธิ์เสมอ</div></div></div></div>') + '</div></div>' +
-        '<div class="stack">' + (ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : ED.type === 'PICK' ? pickEditor(c) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
+        '<div class="stack">' + (isTh(ED) ? thEditor(ED) : ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : ED.type === 'PICK' ? pickEditor(c) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
       $('#page').innerHTML = h;
       bindEditor();
       if (ED.type === 'PICK') bindPickEditor(ED, readForm, draw, isNew);
+      if (isTh(ED)) thBindEditor(ED, readForm, draw);
     };
     var readForm = function () {
       $$('[data-k]').forEach(function (i) { ED[i.dataset.k] = i.value; });
@@ -580,6 +595,7 @@ function editEvent(id) {
       var a = ED.audience = ED.audience || { mode: 'ALL' };
       $$('[data-a]').forEach(function (t) { a[t.dataset.a] = t.value.split(/[\n,]+/).map(function (x) { return x.trim(); }).filter(Boolean); });
       if (ED.type === 'PICK') readPickForm(ED);
+      if (isTh(ED)) thReadForm(ED);
       if (ED.type === 'CHOICE' || ED.type === 'ORDER') {
         var c = ED.config;
         $$('[data-c]').forEach(function (i) { var k = i.dataset.c; c[k] = i.type === 'checkbox' ? i.checked : i.type === 'number' ? +i.value : i.value; });
@@ -1075,6 +1091,7 @@ function settingsAudit() {
 
 /* =================================================================== พื้นที่ทำงานต่อกิจกรรม (แยกแต่ละกิจกรรมชัดเจน) */
 function wsTabs(ev) {
+  if (isTh(ev)) return thWsTabs(ev);
   var t = ev.type === 'ORDER'
     ? [['orders', 'คำสั่งซื้อ / ตรวจสลิป', 'shirt'], ['summary', 'สรุปสำหรับสั่งต่อ', 'table'], ['print', 'พิมพ์ / ใบเซ็นรับ', 'printer'], ['mail', 'อีเมล', 'mail'], ['settings', 'ตั้งค่ากิจกรรม', 'settings']]
     : ev.type === 'PICK'
@@ -1087,7 +1104,7 @@ ROUTES['admin/ev'] = function (params, q) {
   if (!needViewer()) return;
   $('#page').innerHTML = skel(3);
   loadEvents().then(function (list) {
-    list = list.filter(function (e) { return e.type !== 'ORDER' || canEv(e.id); });
+    list = list.filter(function (e) { return ['ORDER', 'QUESTION', 'CHECKIN'].indexOf(e.type) < 0 || canEv(e.id); });
     var id = params[0] || S.lastAdminEvent || (list[0] && list[0].id), ev = list.filter(function (e) { return e.id === id; })[0];
     if (!ev) { $('#page').innerHTML = '<div class="card empty">' + ic('layers') + '<p>ไม่พบกิจกรรม</p><a class="btn" href="#/admin/events">กิจกรรมทั้งหมด</a></div>'; return; }
     var tabs = wsTabs(ev), tab = params[1] && tabs.some(function (t) { return t[0] === params[1]; }) ? params[1] : tabs[0][0];
@@ -1095,7 +1112,7 @@ ROUTES['admin/ev'] = function (params, q) {
     setAccent(ev.color); shell();
     document.title = ev.title + ' · ' + tabs.filter(function (t) { return t[0] === tab; })[0][1];
     $('#evbar').innerHTML = '<div class="evbar" style="--ec:' + esc(ev.color) + '">' + (isAdmin() ? '<a class="crumb" href="#/admin/events" style="text-decoration:none">' + ic('arrowl') + ' กิจกรรมทั้งหมด</a>' : '') +
-      '<div class="row between" style="align-items:flex-start;margin-top:4px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="evicon">' + ic(ev.type === 'ORDER' ? 'shirt' : 'layers') + '</span><div><h1>' + esc(ev.title) + '</h1>' +
+      '<div class="row between" style="align-items:flex-start;margin-top:4px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="evicon">' + ic(ev.type === 'ORDER' ? 'shirt' : ev.type === 'NOMINATE' ? 'award' : ev.type === 'QUESTION' ? 'chat' : ev.type === 'CHECKIN' ? 'qr' : 'layers') + '</span><div><h1>' + esc(ev.title) + '</h1>' +
       '<div class="row small muted" style="gap:8px;margin-top:4px">' + evStatusChip(ev.status) + '<span class="chip">' + esc(TYPE_TH[ev.type] || ev.type) + '</span><span>' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.audience && ev.audience.mode === 'FILTER' ? '<span>' + ic('users') + ' เฉพาะกลุ่ม</span>' : ev.audience && ev.audience.mode === 'LIST' ? '<span>' + ic('users') + ' ตามรายชื่อ' + (ev.eligible ? ' ' + nf(ev.eligible) + ' คน' : '') + '</span>' : '') + (!canEv(ev.id) ? '<span class="chip info">ดูอย่างเดียว (หัวหน้า)</span>' : '') + '</div></div></div>' +
       '<div class="row">' + (isAdmin() && (AD.events || []).length > 1 ? '<select class="input" id="wsSwitch" style="width:auto;min-height:38px">' + AD.events.map(function (e) { return '<option value="' + esc(e.id) + '" ' + (e.id === ev.id ? 'selected' : '') + '>' + esc(e.title) + '</option>'; }).join('') + '</select>' : '') +
       helpBtn() + '<a class="btn sm" href="#/event/' + esc(ev.id) + '">' + ic('eye') + 'มุมมองบุคลากร</a></div></div>' +
@@ -1103,8 +1120,9 @@ ROUTES['admin/ev'] = function (params, q) {
     var sw = $('#wsSwitch'); if (sw) sw.onchange = function () { go('#/admin/ev/' + sw.value); };
     $('#page').classList.add('ws');
     var id1 = [ev.id];
-    ({ overview: function () { ROUTES['admin/dashboard'](id1); }, tracking: function () { ROUTES['admin/tracking'](id1, q || {}); }, reports: function () { ROUTES['admin/reports'](id1, q || {}); },
-      mail: function () { ROUTES['admin/mail'](id1); }, settings: function () { editEvent(ev.id); }, orders: function () { adminOrdersPage(ev.id); }, print: function () { printPage(ev); }, summary: function () { adminOrderSummaryPage(ev.id); } })[tab]();
+    clearInterval(window._thTimer);
+    (Object.assign({ overview: function () { ROUTES['admin/dashboard'](id1); }, tracking: function () { ROUTES['admin/tracking'](id1, q || {}); }, reports: function () { ROUTES['admin/reports'](id1, q || {}); },
+      mail: function () { ROUTES['admin/mail'](id1); }, settings: function () { editEvent(ev.id); }, orders: function () { adminOrdersPage(ev.id); }, print: function () { printPage(ev); }, summary: function () { adminOrderSummaryPage(ev.id); } }, isTh(ev) ? thTabFns(ev) : {}))[tab]();
   }).catch(errToast);
 };
 
