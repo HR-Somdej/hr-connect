@@ -324,7 +324,7 @@ function drawAoTable() {
   $('#aoTable').innerHTML = '<div class="tablewrap resp"><table class="t"><thead><tr><th style="width:34px"><input type="checkbox" id="aoAll" title="เลือกทั้งหมดที่ชำระแล้ว"></th><th>เลขที่ / ผู้สั่ง</th><th>รายการ</th><th class="r">ยอด (บาท)</th><th>สถานะ</th><th></th></tr></thead><tbody>' +
     (slice.length ? slice.map(function (o) {
       return '<tr><td>' + (o.payStatus === 'PAID' && !o.cancelled ? '<input type="checkbox" data-sel="' + esc(o.id) + '" ' + (AO.sel[o.id] ? 'checked' : '') + '>' : '') + '</td>' +
-        '<td><div class="nm">' + esc(o.id) + ' · ' + esc(o.name) + '</div><div class="sub">' + esc(o.empCode + ' · ' + (o.unit || o.division)) + (o.phone ? ' · <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + '</a>' : '') + '</div><div class="sub">' + esc(thShort(o.createdAt)) + (o.note ? ' · 📝 ' + esc(o.note) : '') + '</div></td>' +
+        '<td><div class="nm">' + esc(o.id) + ' · ' + esc(o.name) + '</div><div class="sub">' + esc(o.empCode + ' · ' + (o.unit || o.division)) + (o.phone ? ' · ' + pii(o.phone, 'tel') : '') + '</div><div class="sub">' + esc(thShort(o.createdAt)) + (o.note ? ' · 📝 ' + esc(o.note) : '') + '</div></td>' +
         '<td>' + itemsHtml(o.items) + '</td><td class="r num"><b>' + baht(o.total) + '</b>' + (o.shipping ? '<div class="sub">ค่าส่ง ' + baht(o.shipping) + '</div>' : '') + '</td>' +
         '<td>' + payChip(o) + (o.payStatus === 'PAID' ? '<div class="sub">' + (o.payMethod === 'CASH' ? '<span class="chip warn" style="padding:0 8px">' + ic('cash') + ' เงินสด</span> ' : o.payMethod === 'TRANSFER' ? 'โอน · ' : '') + 'โดย ' + esc(o.verifiedBy) + (o.cashNote ? ' · ' + esc(o.cashNote) : '') + '</div>' : '') + (o.payStatus === 'PENDING' && !o.slipRefFull ? '<div class="sub" style="color:var(--warn)">อ่าน QR สลิปไม่ได้</div>' : '') + '</td>' +
         '<td class="r" style="white-space:nowrap">' + (o.hasSlip ? '<button class="btn sm ' + (o.payStatus === 'PENDING' ? 'primary' : '') + '" data-rv="' + esc(o.id) + '">' + ic('eye') + (o.payStatus === 'PENDING' ? 'ตรวจสลิป' : 'สลิป') + '</button> ' : (o.payStatus !== 'PAID' && !o.cancelled ? '<button class="btn sm" data-rv="' + esc(o.id) + '">' + ic('check') + 'ยืนยันชำระ</button> ' : '')) +
@@ -382,7 +382,7 @@ function orderHistory(id) {
 function adminOrderModal(o) {
   var ev = AO.d.event, cfg = ev.config, cart = {};
   if (o) o.items.forEach(function (i) { cart[i.optKey + '|' + i.sizeCode] = i.qty; });
-  var body = (o ? '<div class="small muted" style="margin-bottom:8px">' + esc(o.id) + ' · ' + esc(o.name) + ' · ' + payChip(o) + '</div>' : '<div class="field"><label class="f">รหัสพนักงานผู้สั่ง</label><input class="input" id="amEmp" inputmode="numeric" placeholder="เช่น 5660101"></div>') +
+  var body = (o ? '<div class="small muted" style="margin-bottom:8px">' + esc(o.id) + ' · ' + esc(o.name) + ' · ' + payChip(o) + '</div>' : '<div class="field"><label class="f">รหัสพนักงานผู้สั่ง</label><input class="input" id="amEmp" inputmode="numeric" placeholder="เลขประจำตัวบุคลากร 7 หลัก"></div>') +
     (cfg.options || []).map(function (op) {
       return '<h4 style="margin:10px 0 6px">' + esc(op.label) + '</h4><div class="qgrid sm">' + op.sizes.filter(function (s) { return !s.hidden; }).map(function (s) {
         var k = op.key + '|' + s.code; return '<div class="qcell"><div class="qtop"><b>' + esc(s.code) + '</b><span class="price">' + baht(s.price) + '</span></div><input class="input" type="number" min="0" data-am="' + esc(k) + '" value="' + (cart[k] || 0) + '"></div>';

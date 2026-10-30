@@ -1,7 +1,7 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-28.5';
-var HRC_API_BUILD = '2569-10-28.4';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
+var HRC_BUILD = '2569-10-29.1';
+var HRC_API_BUILD = '2569-10-29.1';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -26,8 +26,13 @@ function parseLocal(iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d
 function initials(name) { var n = String(name || '').replace(/^(นาย|นางสาว|นาง|ดร\.|นพ\.|พญ\.)\s*/, '').trim(); return n ? n.charAt(0) : '?'; }
 function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
 function hasRole(r) { return S.me && S.me.roles.indexOf(r) >= 0; }
+/** มีบทบาทผู้ดูแลอย่างใดอย่างหนึ่ง (สูงสุด หรือ ผู้ดูแลกิจกรรม) */
 function isAdmin() { return hasRole('SUPER') || hasRole('ADMIN'); }
+function isSuper() { return hasRole('SUPER'); }
 function isHead() { return hasRole('HEAD'); }
+/** จัดการกิจกรรมนี้ได้ (ผู้ดูแลสูงสุด หรือ ผู้ดูแลที่ได้รับมอบหมายกิจกรรมนี้) */
+function canEv(id) { if (isSuper()) return true; if (!hasRole('ADMIN')) return false; var l = S.me.adminEvents || []; return l.indexOf('*') >= 0 || l.indexOf(id) >= 0; }
+var TYPE_TH = { CHOICE: 'เลือกแบบ + ไซซ์', PICK: 'เลือก 1 รายการ (ตามรายชื่อ)', ORDER: 'สั่งซื้อ + ชำระเงิน', REGISTER: 'ลงทะเบียน', REQUEST: 'คำขอ' };
 function setAccent(hex) {
   hex = hex || '#8E4B9D';
   var r = document.documentElement.style;
@@ -93,7 +98,7 @@ function ic(name, cls) { return '<svg class="i ' + (cls || '') + '" viewBox="0 0
 var NET = { active: 0, queue: [], MAX: 4 };
 function netSlot() { return new Promise(function (res) { if (NET.active < NET.MAX) { NET.active++; res(); } else NET.queue.push(res); }); }
 function netDone() { var n = NET.queue.shift(); if (n) n(); else NET.active = Math.max(0, NET.active - 1); }
-function isRead(a) { return /^(get|list|bootstrap|branding|ping|lookup|preview)/.test(a); }
+function isRead(a) { return /^(get|list|bootstrap|branding|ping|lookup|preview|helpdeskLookup)/.test(a); }
 function fetchOnce(action, payload) {
   if (!window.API_URL || /ใส่ลิงก์/.test(window.API_URL)) return Promise.reject(new Error('ยังไม่ได้ตั้งค่า API_URL ในไฟล์ config.js'));
   return fetch(window.API_URL, { method: 'POST', redirect: 'follow', credentials: 'omit', cache: 'no-store',
@@ -283,6 +288,7 @@ function render() {
   var fn = ROUTES[name];
   if (!fn) { name = 'home'; fn = ROUTES.home; params = []; }
   S.rid = (S.rid || 0) + 1;
+  S.piiRedraw = null;
   S.route = name; S.inWs = false; S.wsTab = null;
   shell();
   $('#evbar').innerHTML = ''; $('#page').classList.remove('ws');
@@ -294,24 +300,30 @@ function render() {
 function defaultEventId() { var ev = (S.boot.events || [])[0]; return ev ? ev.id : ''; }
 function navEvents() {
   var list = (window.AD && AD.events) || S.boot.events || [];
-  if (!isAdmin()) list = list.filter(function (e) { return e.type !== 'ORDER'; });
+  if (!isSuper()) list = list.filter(function (e) { return e.type !== 'ORDER' || canEv(e.id); });
   return list.filter(function (e) { return e.status !== 'CLOSED' || e.id === S.lastAdminEvent || list.length <= 6; }).slice(0, 12);
 }
 function navItems() {
   var items = [{ sec: 'บุคลากร' }, { k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก / กิจกรรมของฉัน' }];
   if (isAdmin() || isHead()) {
-    items.push({ sec: isAdmin() ? 'กิจกรรม (ผู้ดูแล)' : 'กิจกรรม (หัวหน้า)' });
+    items.push({ sec: isSuper() ? 'กิจกรรม (ผู้ดูแลสูงสุด)' : isAdmin() ? 'กิจกรรมที่ท่านดูแล' : 'กิจกรรม (หัวหน้า)' });
     navEvents().forEach(function (e) { items.push({ k: 'ev:' + e.id, href: '#/admin/ev/' + e.id, dot: e.color, label: e.title, ev: e }); });
-    if (isAdmin()) items.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'จัดการกิจกรรมทั้งหมด' });
+    if (isAdmin()) items.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: isSuper() ? 'จัดการกิจกรรมทั้งหมด' : 'รายการกิจกรรมของฉัน' });
   }
-  if (isAdmin()) {
-    items.push({ sec: 'ระบบ' });
+  if (isAdmin()) items.push({ k: 'admin/helpdesk', href: '#/admin/helpdesk', icon: 'key', label: 'ช่วยเหลือบุคลากร (รหัสผ่าน)' });
+  if (isSuper()) {
+    items.push({ sec: 'ระบบ (ผู้ดูแลสูงสุด)' });
     items.push({ k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อบุคลากร' });
     items.push({ k: 'admin/heads', href: '#/admin/heads', icon: 'building', label: 'หัวหน้าฝ่าย/หน่วย' });
     items.push({ k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่าระบบ' });
   }
-  items.push({ sec: 'ช่วยเหลือ' }, { k: 'manual', href: 'manual.html?v=' + HRC_BUILD + (isAdmin() ? '#admin' : isHead() ? '#head' : '#staff'), icon: 'book', label: 'คู่มือการใช้งาน', ext: true });
+  items.push({ sec: 'ช่วยเหลือ' }, { k: 'manual', href: manualRoleUrl(isAdmin() ? 'admin' : isHead() ? 'head' : 'staff'), icon: 'book', label: 'คู่มือการใช้งาน', ext: true });
   return items;
+}
+/** ลิงก์คู่มือกลาง · role กำหนดว่าแสดงส่วนของหัวหน้า/ผู้ดูแลหรือไม่ (บุคลากรทั่วไปเห็นเฉพาะส่วนบุคลากร) */
+function manualRoleUrl(anchor) {
+  var role = !S.me ? 'staff' : isSuper() ? 'super' : isAdmin() ? 'admin' : isHead() ? 'head' : 'staff';
+  return 'manual.html?v=' + HRC_BUILD + '&role=' + role + (anchor && !/^(staff|admin|head)$/.test(anchor) ? '#' + anchor : '#' + (role === 'super' ? 'admin' : role));
 }
 function shell() {
   var app = $('#app');
@@ -331,7 +343,8 @@ function shell() {
     return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '"' + (it.ext ? ' target="_blank" rel="noopener"' : '') + '>' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
   }).join('');
   var mob = [{ k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก' }];
-  if (isAdmin()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' }, { k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อ' }, { k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่า' });
+  if (isSuper()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' }, { k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อ' }, { k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่า' });
+  else if (isAdmin()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' }, { k: 'admin/helpdesk', href: '#/admin/helpdesk', icon: 'key', label: 'ช่วยเหลือ' });
   else if (isHead()) mob.push({ k: 'admin/ev', href: '#/admin/ev', icon: 'chart', label: 'ติดตาม' });
   $('#bnav').innerHTML = mob.length > 1 ? mob.map(function (it) {
     var on = S.route === it.k || (it.k === 'admin/events' && S.route === 'admin/ev');
@@ -340,7 +353,7 @@ function shell() {
   $('#bnav').style.display = mob.length > 1 ? '' : 'none';
   $('#meav').textContent = initials(S.me.firstName || S.me.name);
   $('#mename').textContent = S.me.name;
-  $('#mesub').textContent = S.me.empCode + ' · ' + (S.me.position || '');
+  $('#mesub').textContent = S.me.empCode + ' · ' + (isSuper() ? 'ผู้ดูแลสูงสุด' : hasRole('ADMIN') ? 'ผู้ดูแลกิจกรรม' : isHead() ? 'หัวหน้า' : (S.me.position || ''));
   $('#topsub').textContent = S.me.name;
   var a = S.boot.brand && S.boot.brand.announcement;
   $('#annc').innerHTML = a ? '<div class="announce">' + ic('info') + '<div>' + esc(a) + '</div></div>' : '';
@@ -353,7 +366,7 @@ function helpBtn() { return '<button type="button" class="helpbtn" data-help tit
 
 /* =================================================================== ล็อกอิน / ออก */
 function saveSession(token, boot) {
-  S.token = token; S.boot = boot; S.me = boot.me;
+  S.token = token; if (boot) { S.boot = boot; S.me = boot.me; }
   try { localStorage.setItem('hrc_token', token); } catch (e) { }
 }
 function expired() {
@@ -409,3 +422,79 @@ function checkVersion() {
     }).catch(function () { });
   }, 600000);
 }
+
+
+/* =================================================================== รูปที่ผู้ดูแลอัปโหลด (img:ID) — โหลดผ่านหลังบ้าน + จำไว้ในเครื่อง */
+var IMGC = {};
+function imgUrl(ref) { return /^img:/.test(ref || '') ? '' : (ref || ''); }
+/** สร้าง <img> · ถ้าเป็นรูปที่อัปโหลด (img:ID) จะโหลดให้อัตโนมัติ */
+function imgTag(ref, alt, attrs) {
+  if (!ref) return '';
+  if (/^img:/.test(ref)) return '<img data-img="' + esc(ref) + '" alt="' + esc(alt || '') + '" ' + (attrs || '') + '>';
+  return '<img src="' + esc(ref) + '" alt="' + esc(alt || '') + '" ' + (attrs || '') + '>';
+}
+function loadImg(ref) {
+  if (IMGC[ref]) return IMGC[ref];
+  var k = 'img|' + ref;
+  try { var hit = localStorage.getItem('hrc_img:' + ref); if (hit) return (IMGC[ref] = Promise.resolve(hit)); } catch (e) { }
+  IMGC[ref] = rawCall('getImage', { id: ref }).then(function (r) {
+    if (!r.ok) throw new Error(r.error);
+    try { localStorage.setItem('hrc_img:' + ref, r.data.dataUrl); } catch (e) { }
+    return r.data.dataUrl;
+  });
+  IMGC[ref].catch(function () { delete IMGC[ref]; });
+  return IMGC[ref];
+}
+function hydrateImages(root) {
+  if (!S.token) return;
+  $$('img[data-img]:not([src])', root).forEach(function (im) {
+    var ref = im.getAttribute('data-img');
+    im.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==');
+    loadImg(ref).then(function (u) { im.src = u; }, function () { im.alt = 'โหลดรูปไม่ได้'; });
+  });
+}
+(function () {
+  if (!window.MutationObserver) return;
+  var pend = false;
+  new MutationObserver(function () { if (pend) return; pend = true; setTimeout(function () { pend = false; hydrateImages(document); }, 30); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+})();
+/** ย่อรูปในเครื่องก่อนส่ง (กว้าง/สูงไม่เกิน max px · JPEG) */
+function shrinkImage(file, max, q) {
+  return new Promise(function (res, rej) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        var w = im.naturalWidth, h = im.naturalHeight, r = Math.min(1, (max || 1400) / Math.max(w, h));
+        var cv = document.createElement('canvas'); cv.width = Math.round(w * r); cv.height = Math.round(h * r);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(im, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL('image/jpeg', q || 0.84));
+      };
+      im.onerror = function () { rej(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่อ่านได้')); };
+      im.src = fr.result;
+    };
+    fr.onerror = function () { rej(new Error('อ่านไฟล์ไม่ได้')); };
+    fr.readAsDataURL(file);
+  });
+}
+
+
+/* =================================================================== ความเป็นส่วนตัว: ซ่อนเบอร์/อีเมลในหน้าผู้ดูแล (กดรูปตาเพื่อแสดง) */
+S.pii = false;   // ปิดทุกครั้งที่เปิดหน้าเว็บใหม่
+function maskPhone(p) { p = String(p || ''); if (!p) return ''; return p.length <= 4 ? '••••' : p.slice(0, 2) + '•'.repeat(Math.max(3, p.length - 4)) + p.slice(-2); }
+function maskEmail(e) { e = String(e || ''); var m = e.match(/^(.{1,2})[^@]*(@.*)$/); return m ? m[1] + '•••' + m[2] : '•••'; }
+/** ค่าส่วนตัว: ซ่อนไว้ คลิกเพื่อแสดงทีละช่อง หรือกดปุ่มรูปตาเพื่อแสดงทั้งหมด */
+function pii(v, kind) {
+  if (!v) return '';
+  if (S.pii) return kind === 'tel' ? '<a href="tel:' + esc(v) + '" class="num" style="white-space:nowrap">' + ic('phone') + ' ' + esc(v) + '</a>' : '<span class="' + (kind === 'email' ? '' : 'num') + '">' + esc(v) + '</span>';
+  return '<span class="pii" role="button" tabindex="0" title="คลิกเพื่อแสดง" data-pv="' + esc(v) + '" data-pk="' + (kind || '') + '">' + (kind === 'tel' ? ic('phone') + ' ' : '') + esc(kind === 'email' ? maskEmail(v) : maskPhone(v)) + '</span>';
+}
+function piiBtn() { return '<button type="button" class="btn sm piibtn" data-piitoggle title="' + (S.pii ? 'ซ่อนเบอร์โทร/อีเมล' : 'แสดงเบอร์โทร/อีเมลทั้งหมด') + '">' + ic(S.pii ? 'eyeoff' : 'eye') + (S.pii ? 'ซ่อนเบอร์/อีเมล' : 'แสดงเบอร์/อีเมล') + '</button>'; }
+document.addEventListener('click', function (e) {
+  var t = e.target.closest && e.target.closest('[data-piitoggle]');
+  if (t) { S.pii = !S.pii; $$('[data-piitoggle]').forEach(function (b) { b.outerHTML = piiBtn(); }); if (S.piiRedraw) S.piiRedraw(); return; }
+  var p = e.target.closest && e.target.closest('.pii');
+  if (p) { e.preventDefault(); e.stopPropagation(); var v = p.dataset.pv, k = p.dataset.pk; p.outerHTML = k === 'tel' ? '<a href="tel:' + esc(v) + '" class="num" style="white-space:nowrap">' + ic('phone') + ' ' + esc(v) + '</a>' : '<span class="num">' + esc(v) + '</span>'; }
+}, true);
+document.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('pii')) { e.preventDefault(); e.target.click(); } });

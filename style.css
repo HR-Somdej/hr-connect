@@ -487,3 +487,96 @@ ol.helpsteps li::before { content: counter(hs); position: absolute; left: 0; top
 .helptips ul { margin: 6px 0 0; padding-left: 20px; line-height: 1.6; }
 .mh h3 svg.i { vertical-align: -3px; color: var(--accent); }
 @media (max-width: 960px) { .pagehead .helpbtn span, .evbar .helpbtn span { display: inline; } }
+
+/* ===================================================================== 2569-10-29.1 : รหัสผ่าน · ข้อมูลติดต่อ · PICK · ผู้ดูแลรายกิจกรรม · ความเป็นส่วนตัว */
+.lgtabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin-bottom: 18px; }
+.lgtabs button { justify-content: center; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.lgerr { background: var(--danger-soft); color: var(--danger); border-radius: 12px; padding: 10px 13px; font-size: 14px; margin-bottom: 14px; display: flex; gap: 8px; }
+.helpbox { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 16px; font-size: 14px; }
+.helpbox > svg.i { color: var(--accent); width: 22px; height: 22px; }
+.helpbox a.num { color: var(--ink); font-weight: 700; }
+.btn.line { background: #06c755; border-color: #06c755; color: #fff; }
+.btn.line:hover { background: #05b14b; }
+.btn.line svg.i { stroke: none; }
+.pwrules { list-style: none; margin: -4px 0 14px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; color: var(--muted); }
+.pwrules li { display: flex; align-items: center; gap: 6px; }
+.pwrules li svg.i { width: 15px; height: 15px; color: var(--danger); }
+.pwrules li.ok { color: var(--ok); }
+.pwrules li.ok svg.i { color: var(--ok); }
+.input.otp { font-size: 28px; letter-spacing: 12px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; }
+.bigicon { width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center; margin: 0 auto 10px; background: var(--accent-soft); color: var(--accent-2); }
+.bigicon svg.i { width: 28px; height: 28px; }
+.bigicon.warn { background: var(--warn-soft); color: var(--warn); }
+.bigicon.danger { background: var(--danger-soft); color: var(--danger); }
+/* หน้าแรก: ข้อมูลติดต่อ */
+.wcontact { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13.5px; opacity: .95; align-items: center; }
+.wcontact > span { display: inline-flex; align-items: center; gap: 5px; }
+.wcontact svg.i { width: 15px; height: 15px; }
+.wedit { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35); color: #fff; border-radius: 99px; padding: 3px 11px; font-size: 13px; cursor: pointer; }
+.wedit:hover { background: rgba(255,255,255,.28); }
+.wedit svg.i { width: 14px; height: 14px; }
+.pwbanner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: linear-gradient(90deg, var(--info-soft), #fff); border: 1px solid #cfe0fb; color: #1e3a8a; border-radius: 16px; padding: 12px 16px; margin: 14px 0 18px; }
+.pwbanner > svg.i { width: 24px; height: 24px; color: var(--info); }
+.mygrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+.mycard { margin: 0; }
+.ctgrid { display: grid; gap: 12px; }
+.ctrow { display: flex; gap: 12px; align-items: center; }
+.ctrow .ci { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); color: var(--accent-2); flex: none; }
+.ctrow small { display: block; color: var(--muted); font-size: 12.5px; }
+.ctrow b { font-weight: 600; word-break: break-all; }
+@media (max-width: 860px) { .mygrid { grid-template-columns: 1fr; } .pwrules { grid-template-columns: 1fr; } }
+/* หน้ากิจกรรม PICK */
+.noticebox { display: flex; gap: 12px; background: #fff7e0; border: 1.5px solid #f3cf76; border-left: 7px solid #e8a317; border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; color: #5c4a14; }
+.noticebox > svg.i { color: #b87900; width: 22px; height: 22px; margin-top: 2px; }
+.noticebox b { color: #6b4a00; }
+.noticebox ul { margin: 4px 0 0; padding-left: 20px; }
+.noticebox li { margin-bottom: 3px; }
+.contactbox { display: flex; gap: 12px; align-items: flex-start; background: #e5f6f6; border: 1.5px solid #8ad3d3; border-left: 7px solid #0e8f8f; border-radius: 16px; padding: 12px 16px; color: #064e4e; margin-top: 16px; }
+.contactbox > svg.i { color: #0e8f8f; margin-top: 3px; }
+.picks { display: grid; gap: 10px; }
+.pick { position: relative; display: flex; align-items: center; gap: 12px; border: 2px solid var(--line-2); border-left-width: 6px; border-radius: 14px; padding: 12px 14px; background: #fff; cursor: pointer; transition: all .15s; }
+.pick:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); background: var(--surface-2); }
+.pick input { position: absolute; opacity: 0; pointer-events: none; }
+.pick .rd { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); flex: none; display: grid; place-items: center; background: #fff; }
+.pick.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent); }
+.pick.on .rd { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 4px #fff; }
+.pick .pt { flex: 1; min-width: 0; }
+.pick .pt b { display: block; font-weight: 600; line-height: 1.45; }
+.pick .pt small { color: var(--muted); font-size: 12.5px; }
+.pick .pimg { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; flex: none; background: var(--surface-2); }
+.pick .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pick.decl { border-style: dashed; border-color: #f0a3b0; background: #fff0f2; }
+.pick.decl .pt b { color: #8a2a3b; }
+.pick.decl.on { border-style: solid; border-color: #d6455d; background: #ffe4e8; box-shadow: 0 0 0 4px rgba(214,69,93,.14); }
+.pick.decl.on .rd { border-color: #d6455d; background: #d6455d; }
+.empty-note { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 14.5px; }
+.pickconfirm { font-family: var(--font-head); font-size: 21px; font-weight: 700; color: var(--accent-2); margin: 8px 0 2px; line-height: 1.4; }
+.coverico { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.55); }
+.coverico svg.i { width: 54px; height: 54px; }
+/* ผู้ดูแล: แดชบอร์ด PICK · ติดตาม · ตั้งค่า */
+.pbar { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.pbar .lbl2 { font-size: 13.5px; font-weight: 500; min-width: 0; }
+.pbar .track { position: relative; height: 10px; border-radius: 99px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+.pbar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--accent); z-index: 2; }
+.pbar .fill.ghost { background: color-mix(in srgb, var(--accent) 18%, #fff); z-index: 1; }
+tr.selrow td { background: color-mix(in srgb, var(--warn) 7%, #fff) !important; }
+.bulkbar .spacer { flex: 1; }
+.btn.dangerfill { background: var(--danger); border-color: var(--danger); color: #fff; } .btn.dangerfill:hover { filter: brightness(.92); }
+.pkedit td { vertical-align: middle; }
+.pkedit .input { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.pthumb { width: 38px; height: 38px; border-radius: 8px; overflow: hidden; flex: none; background: var(--surface-2); display: inline-block; }
+.pthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.evchecks { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
+.evchecks .docopt input { margin-top: 4px; }
+.edot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; }
+.tempw { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 34px; font-weight: 700; letter-spacing: 4px; color: var(--accent-2); background: var(--accent-soft); border-radius: 14px; padding: 10px 16px; margin: 8px auto; display: inline-block; }
+/* ความเป็นส่วนตัว: เบอร์/อีเมล */
+.pii { cursor: pointer; color: var(--ink-2); border-bottom: 1px dotted var(--line-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pii:hover { color: var(--accent-2); border-bottom-color: var(--accent); }
+.piibtn svg.i { width: 16px; height: 16px; }
+.evhero > .info:only-child { grid-column: 1 / -1; border-top: 6px solid var(--accent); }
+.helpbox a.num { white-space: nowrap; }
+#wsSwitch { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.evbar .row { min-width: 0; }
+@media (max-width: 640px) { #wsSwitch { width: 100% !important; } }
+.kv dd .chip { white-space: normal; }
