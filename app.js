@@ -333,6 +333,8 @@ function navItems() {
   var items = [{ sec: 'บุคลากร' }, { k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก / กิจกรรมของฉัน' }];
   // 8 พ.ย. 69: ลิงก์ไปหน้า "ค่าน้ำ–ค่าไฟที่พักของฉัน" (SOMDEJ U-Bill · โดเมนเดียวกัน เข้าต่อได้ไม่ต้องล็อกอินซ้ำ)
   items.push({ k: 'ubill', href: 'https://hr-somdej.github.io/u-bill/me.html', icon: 'link', label: 'ค่าน้ำ–ค่าไฟที่พักของฉัน', ext: true });
+  // 9 พ.ย. 69: ลิงก์ไป SOMDEJ License "ใบประกอบวิชาชีพของฉัน" (โดเมนเดียวกัน เข้าต่อได้ไม่ต้องล็อกอินซ้ำ · ผู้ดูแล/หัวหน้าเห็นเมนูของตนในระบบนั้น)
+  items.push({ k: 'license', href: 'https://hr-somdej.github.io/license/', icon: 'link', label: 'ใบประกอบวิชาชีพของฉัน', ext: true });
   if (isAdmin() || isHead()) {
     items.push({ sec: isSuper() ? 'กิจกรรม (ผู้ดูแลสูงสุด)' : isAdmin() ? 'กิจกรรมที่ท่านดูแล' : 'กิจกรรม (หัวหน้า)' });
     navEvents().forEach(function (e) { items.push({ k: 'ev:' + e.id, href: '#/admin/ev/' + e.id, dot: e.color, label: e.title, ev: e }); });
