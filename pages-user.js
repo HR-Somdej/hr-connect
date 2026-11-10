@@ -319,6 +319,7 @@ ROUTES.home = function () {
     '<div class="wcontact">' + (me.phone ? '<span>' + ic('phone') + ' <span class="num">' + esc(me.phone) + '</span></span>' : '') + (me.email ? '<span>' + ic('mail') + ' ' + esc(me.email) + '</span>' : '<span>' + ic('alert') + ' ยังไม่มีอีเมล</span>') +
     '<button class="wedit" id="btnContact2">' + ic('edit') + 'ตรวจ/แก้ข้อมูลติดต่อ</button></div></div></div>';
   if (!me.hasPassword) h += '<div class="pwbanner">' + ic('shield') + '<div style="flex:1;min-width:200px"><b>ตั้งรหัสผ่านของท่านเอง</b><div class="small">ตอนนี้เข้าระบบด้วยเลขบัตรประชาชน ซึ่งผู้อื่นอาจทราบได้ — ตั้งรหัสผ่านเพื่อความปลอดภัยและความเป็นส่วนตัว</div></div><button class="btn primary sm" id="btnPw2">' + ic('key') + 'ตั้งรหัสผ่าน</button></div>';
+  h += serviceTiles();   // 10 พ.ย. 69: ทางลัดค่าน้ำ–ค่าไฟ / ใบประกอบวิชาชีพ (เห็นชัดบนมือถือ)
   var evs = b.events || [];
   h += '<div class="row between" style="margin-bottom:12px"><h2 style="font-size:19px">กิจกรรมของฉัน</h2><div class="row" style="gap:10px"><span class="muted small">' + evs.length + ' กิจกรรม</span>' + helpBtn() + '</div></div>';
   if (!evs.length) h += '<div class="card empty">' + ic('calendar') + '<p>ยังไม่มีกิจกรรมที่เปิดสำหรับท่านในขณะนี้</p></div>';
