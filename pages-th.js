@@ -107,6 +107,9 @@ function nmSummaryHtml(open) {
 function nmDrawForm() {
   var c = nmCfg(), d = EVS.nm, total = nmCount(d), lastGroup = '', mine = (EVS.x.nominations || {}).count || 0;
   var h = '<div class="step" style="margin-bottom:10px"><div class="sh"><span class="no">' + ic('award') + '</span><div><h3>เลือกผู้ที่ท่านต้องการเสนอชื่อ</h3><div class="small muted">หมวดละไม่เกิน ' + c.max + ' ชื่อ · เลือกเฉพาะหมวดที่ท่านรู้จักผลงานก็ได้ · เหตุผลไม่บังคับ</div></div></div></div>';
+  // 13 พ.ย. 69: ค้นหาข้ามทุกหมวด — พิมพ์ชื่อ/รหัส/ตำแหน่ง/หน่วยงาน/ฝ่าย แล้วรู้ทันทีว่าอยู่หมวดไหน + เสนอชื่อได้จากผลค้นหา
+  h += '<div class="card th-find"><div class="bd"><label class="f" for="nmFindQ">' + ic('search') + ' ค้นหาว่าบุคลากรอยู่หมวดไหน</label>' +
+    '<input class="input search" id="nmFindQ" placeholder="พิมพ์ชื่อ นามสกุล รหัสบุคลากร ตำแหน่ง หน่วยงาน หรือฝ่าย" autocomplete="off" value="' + esc(EVS.findQ || '') + '"><div id="nmFindR"></div></div></div>';
   h += '<div class="th-cats">';
   c.cats.forEach(function (cat) {
     if (cat.group && cat.group !== lastGroup) { h += '<div class="th-group">' + esc(cat.group) + '</div>'; lastGroup = cat.group; }
@@ -131,6 +134,7 @@ function nmDrawForm() {
   if (mine) h += '<div class="declinelink"><button class="btn ghost" id="nmClear">' + ic('trash') + ' ยกเลิกการเสนอชื่อทั้งหมด</button></div>';
   $('#nmForm').innerHTML = h;
   var save = function () { thDraftSet(EVS.ev.id, EVS.nm); };
+  nmFindDraw(); $('#nmFindQ').oninput = debounce(function () { EVS.findQ = $('#nmFindQ').value; nmFindDraw(); }, 200);
   $$('[data-add]').forEach(function (b) { b.onclick = function () { nmPicker(b.dataset.add); }; });
   $$('[data-rm]').forEach(function (b) { b.onclick = function () { var p = b.dataset.rm.split(':'); d[p[0]].splice(+p[1], 1); if (!d[p[0]].length) delete d[p[0]]; save(); nmDrawForm(); }; });
   $$('[data-rs]').forEach(function (b) { b.onclick = function () { var p = b.dataset.rs.split(':'), x = d[p[0]][+p[1]], n = +p[2], i = x.reasons.indexOf(n); if (i >= 0) x.reasons.splice(i, 1); else { x.reasons.push(n); x.reasons.sort(); } save(); nmDrawForm(); }; });
@@ -143,6 +147,25 @@ function nmDrawForm() {
     });
   };
   $('#nmSave').onclick = nmConfirm;
+}
+function nmFindDraw() {
+  var box = $('#nmFindR'); if (!box) return;
+  var c = nmCfg(), d = EVS.nm, raw = String(EVS.findQ || '').trim();
+  if (!raw) { box.innerHTML = ''; return; }
+  var q = raw.toLowerCase().split(/\s+/).filter(Boolean), catOf = {}; c.cats.forEach(function (x) { catOf[x.key] = x; });
+  var hit = NM.list.filter(function (x) { var s = (x[0] + ' ' + x[1] + ' ' + x[2] + ' ' + x[3] + ' ' + x[4]).toLowerCase(); return q.every(function (w) { return s.indexOf(w) >= 0; }); });
+  var show = hit.slice(0, 30);
+  box.innerHTML = '<div class="small muted" style="margin:8px 0">' + (hit.length ? 'พบ ' + nf(hit.length) + ' คน' + (hit.length > 30 ? ' (แสดง 30 คนแรก พิมพ์เพิ่มเพื่อค้นให้แคบลง)' : '') : 'ไม่พบรายชื่อ — บุคลากรนี้อาจไม่อยู่ในรายชื่อผู้มีสิทธิ์ถูกเสนอชื่อ') + '</div>' +
+    '<div class="th-plist" style="max-height:360px">' + show.map(function (x) {
+      var cat = catOf[x[5]], arr = d[x[5]] || [], taken = arr.some(function (y) { return y.code === x[0]; }), full = arr.length >= c.max, self = !c.allowSelf && x[0] === S.me.empCode;
+      var btn = !cat ? '<span class="chip">ไม่อยู่ในหมวดที่เสนอได้</span>' : taken ? '<span class="chip ok">' + ic('check') + ' เลือกแล้ว</span>' : self ? '<span class="chip">เสนอตนเองไม่ได้</span>' : full ? '<span class="chip warn">หมวดนี้ครบ ' + c.max + ' ชื่อแล้ว</span>' :
+        '<button type="button" class="btn sm primary" data-fa="' + esc(x[0]) + '">' + ic('plus') + 'เสนอชื่อ</button>';
+      return '<div class="th-pitem" style="cursor:default"><span class="avatar">' + esc(initials(x[1])) + '</span><span style="flex:1;min-width:0;text-align:left"><b>' + esc(x[1]) + '</b><small>' + esc([x[2], x[3], x[4]].filter(Boolean).join(' · ')) + '</small>' +
+        '<small style="color:var(--accent);font-weight:600">หมวด ' + esc(x[5]) + (cat ? ' ' + esc(cat.label) : '') + '</small></span>' + btn + '</div>';
+    }).join('') + '</div>';
+  $$('[data-fa]', box).forEach(function (b) {
+    b.onclick = function () { var p = NM.by[b.dataset.fa]; (EVS.nm[p[5]] = EVS.nm[p[5]] || []).push({ code: p[0], reasons: [], text: '' }); thDraftSet(EVS.ev.id, EVS.nm); toast('เพิ่ม ' + p[1] + ' ในหมวด ' + p[5] + ' แล้ว', 'ok'); nmDrawForm(); };
+  });
 }
 function nmPicker(cat) {
   var c = nmCfg(), catObj = c.cats.filter(function (x) { return x.key === cat; })[0] || {}, taken = (EVS.nm[cat] || []).map(function (x) { return x.code; });

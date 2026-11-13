@@ -770,3 +770,14 @@ button.chip { font-family: inherit; cursor: pointer; }
 .tl-ev .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
 .tl-testers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .tl-reset { border-color: #f1c6c8; }
+
+/* 13 พ.ย. 69: หน้าเข้าสู่ระบบ — ภาพโรงพยาบาล (ภาพเดียวกับ TalentGate) + ม่านสีม่วง HR Connect + เคลื่อนช้า */
+.login .hero { background: #3d1a4a; isolation: isolate; }
+.login .hero::before { content: ''; position: absolute; inset: -4%; z-index: -1; pointer-events: none;
+  background: linear-gradient(150deg, rgba(52,18,64,.93) 0%, rgba(93,42,107,.82) 42%, rgba(142,75,157,.6) 75%, rgba(200,32,46,.42) 100%), linear-gradient(0deg, rgba(36,10,46,.75) 0%, transparent 48%), url(bg.jpg?v=1) 58% 42%/cover no-repeat;
+  animation: hcKen 38s ease-in-out infinite alternate; will-change: transform; }
+@keyframes hcKen { from { transform: scale(1) translate3d(0,0,0); } to { transform: scale(1.08) translate3d(-1.5%,-1.2%,0); } }
+.login .panel { background: linear-gradient(180deg, rgba(246,243,248,.93), rgba(246,243,248,.98)), url(bg.jpg?v=1) 20% 80%/cover no-repeat; }
+@media (prefers-reduced-motion: reduce) { .login .hero::before { animation: none; } }
+.th-find { margin-bottom: 14px; }
+.th-find .f { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 6px; }

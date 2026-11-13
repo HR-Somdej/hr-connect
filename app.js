@@ -1,7 +1,7 @@
 /* SOMDEJ HR Connect — app.js : แกนกลาง (เรียกหลังบ้าน · แคช · ล็อกอิน · เส้นทางหน้า · UI กลาง)
  * เลขรุ่นต้องตรงกับ Config.gs และ version.json */
-var HRC_BUILD = '2569-10-31.1';
-var HRC_API_BUILD = '2569-10-31.1';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
+var HRC_BUILD = '2569-11-13.3';
+var HRC_API_BUILD = '2569-11-13.3';   // รุ่นหลังบ้าน (Apps Script) ที่หน้าเว็บรุ่นนี้ใช้คู่กัน
 var HRC_VERSION = '1.2569';
 
 var S = { token: null, boot: null, me: null, route: null };
@@ -343,6 +343,10 @@ function navItems() {
   items.push({ k: 'ubill', href: 'https://hr-somdej.github.io/u-bill/me.html', icon: 'drop', label: 'ค่าน้ำ–ค่าไฟที่พักของฉัน', short: 'ค่าน้ำไฟ', desc: 'ดูยอดหักรายเดือน · แจ้งยอดผิดพลาด', svc: true, ext: true });
   // 9 พ.ย. 69: ลิงก์ไป SOMDEJ License "ใบประกอบวิชาชีพของฉัน" (โดเมนเดียวกัน เข้าต่อได้ไม่ต้องล็อกอินซ้ำ · ผู้ดูแล/หัวหน้าเห็นเมนูของตนในระบบนั้น)
   items.push({ k: 'license', href: 'https://hr-somdej.github.io/license/', icon: 'badge', label: 'ใบประกอบวิชาชีพของฉัน', short: 'ใบประกอบ', desc: 'วันหมดอายุ · ต่ออายุ · ใบรับรองอื่น', svc: true, ext: true });
+  // 13 พ.ย. 69: เมนู/ลิงก์ระบบอื่นที่ผู้ดูแลสูงสุดเพิ่มเอง (หน้า "เมนูและระบบที่เชื่อมรหัสผ่าน")
+  var pl = window.portalNavItems ? portalNavItems() : [];
+  if (pl.some(function (x) { return x.menu; })) items.push({ sec: 'ระบบอื่นของโรงพยาบาล' });
+  pl.forEach(function (x) { items.push(x); });
   if (isAdmin() || isHead()) {
     items.push({ sec: isSuper() ? 'กิจกรรม (ผู้ดูแลสูงสุด)' : isAdmin() ? 'กิจกรรมที่ท่านดูแล' : 'กิจกรรม (หัวหน้า)' });
     navEvents().forEach(function (e) { items.push({ k: 'ev:' + e.id, href: '#/admin/ev/' + e.id, dot: e.color, label: e.title, ev: e }); });
@@ -353,6 +357,7 @@ function navItems() {
     items.push({ sec: 'ระบบ (ผู้ดูแลสูงสุด)' });
     items.push({ k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อบุคลากร' });
     items.push({ k: 'admin/heads', href: '#/admin/heads', icon: 'building', label: 'หัวหน้าฝ่าย/หน่วย' });
+    items.push({ k: 'admin/portal', href: '#/admin/portal', icon: 'link', label: 'เมนูและระบบที่เชื่อมรหัสผ่าน' });
     items.push({ k: 'admin/testlab', href: '#/admin/testlab', icon: 'shield', label: 'โหมดทดสอบก่อนใช้งานจริง' });
     items.push({ k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่าระบบ' });
   }
@@ -382,6 +387,7 @@ function shell() {
   var items = navItems();
   $('#nav').innerHTML = items.map(function (it) {
     if (it.sec) return '<div class="sec">' + esc(it.sec) + '</div>';
+    if (it.portal && !it.menu) return '';
     var on = it.ev ? (S.route === 'admin/ev' && S.lastAdminEvent === it.ev.id) : S.route === it.k;
     if (it.ev) return '<a href="' + it.href + '" class="evnav ' + (on ? 'on' : '') + '" title="' + esc(it.label) + '"><span class="edot" style="background:' + esc(it.dot) + '"></span><span class="t">' + esc(it.label) + '</span>' + (it.ev.status === 'OPEN' ? '<span class="live"></span>' : '') + '</a>';
     return '<a href="' + it.href + '" class="' + (on ? 'on' : '') + '"' + (it.ext ? ' target="_blank" rel="noopener"' : '') + '>' + ic(it.icon) + '<span>' + esc(it.label) + '</span></a>';
@@ -390,7 +396,7 @@ function shell() {
   var mob = [{ k: 'home', href: '#/', icon: 'home', label: 'หน้าแรก' }];
   if (isAdmin()) mob.push({ k: 'admin/events', href: '#/admin/events', icon: 'layers', label: 'กิจกรรม' });
   else if (isHead()) mob.push({ k: 'admin/ev', href: '#/admin/ev', icon: 'chart', label: 'ติดตาม' });
-  items.forEach(function (it) { if (it.svc) mob.push({ k: it.k, href: it.href, icon: it.icon, label: it.short || it.label }); });
+  items.forEach(function (it) { if (it.svc && !it.portal) mob.push({ k: it.k, href: it.href, icon: it.icon, label: it.short || it.label }); });
   mob.push({ k: '_menu', href: '#', icon: 'menu', label: 'เมนู', menu: true });
   $('#bnav').innerHTML = mob.map(function (it) {
     var on = S.route === it.k || (it.k === 'admin/events' && S.route === 'admin/ev');
@@ -412,7 +418,7 @@ function serviceTiles() {
   var L = navItems().filter(function (it) { return it.svc; });
   if (!L.length) return '';
   return '<div class="svc-head"><h2>บริการสำหรับบุคลากร</h2><span class="muted small">เข้าได้ทันที ไม่ต้องเข้าสู่ระบบซ้ำ</span></div><div class="svcgrid">' + L.map(function (it) {
-    return '<a class="svc svc-' + esc(it.k) + '" href="' + esc(it.href) + '"><span class="si">' + ic(it.icon) + '</span><span class="st"><b>' + esc(it.label) + '</b><small>' + esc(it.desc || '') + '</small></span>' + ic('arrowr') + '</a>';
+    return '<a class="svc svc-' + esc(it.k.replace(/[^a-z0-9_-]/gi, '-')) + '" href="' + esc(it.href) + '"' + (it.portal && it.ext ? ' target="_blank" rel="noopener"' : '') + '><span class="si">' + ic(it.icon) + '</span><span class="st"><b>' + esc(it.label) + '</b><small>' + esc(it.desc || '') + '</small></span>' + ic('arrowr') + '</a>';
   }).join('') + '</div>';
 }
 function pageHead(title, sub, actions, crumb) {

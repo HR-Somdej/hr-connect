@@ -170,7 +170,10 @@ function helpKey() {
   if (r === 'event') {
     var id = (location.hash.split('/')[2] || '').split('?')[0];
     ev = (S.boot.events || []).filter(function (e) { return e.id === id; })[0];
-    return ev && ev.type === 'NOMINATE' ? 'thNominate' : ev && ev.type === 'QUESTION' ? 'thQuestion' : ev && ev.type === 'CHECKIN' ? 'thDay' : ev && ev.type === 'ORDER' ? 'eventOrder' : ev && ev.type === 'PICK' ? 'eventPick' : 'eventChoice';
+    // 13 พ.ย. 69: ผู้ดูแล/ผู้ทดสอบเปิดกิจกรรมที่ไม่อยู่ในรายการหน้าแรก → ใช้ข้อมูลกิจกรรมที่เปิดอยู่ (เดิมตกไปที่ "จองไซซ์เสื้อ")
+    if (!ev && typeof EVS !== 'undefined' && EVS && EVS.ev && EVS.ev.id === id) ev = EVS.ev;
+    if (!ev) return 'home';
+    return { NOMINATE: 'thNominate', QUESTION: 'thQuestion', CHECKIN: 'thDay', ORDER: 'eventOrder', PICK: 'eventPick' }[ev.type] || 'eventChoice';
   }
   if (r === 'admin/ev') {
     if (tab === 'settings') return 'settingsEv';
