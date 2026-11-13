@@ -13,7 +13,8 @@ function thValues() {
   }).join('') + '</div>';
 }
 function thHero(ev, chips, extra) {
-  return '<div class="th-hero"><div class="th-hero-in"><div class="th-kicker">' + ic(TH_ICON[ev.type] || 'star') + ' Hospital Town Hall</div>' +
+  var cfg = ev.config || {}, pic = cfg.image && cfg.imageHero !== false;
+  return '<div class="th-hero' + (pic ? ' has-pic' : '') + '">' + (pic ? '<div class="th-heropic">' + imgTag(cfg.image, ev.title, 'style="object-fit:' + (cfg.imageFit === 'contain' ? 'contain' : 'cover') + '"') + '</div>' : '') + '<div class="th-hero-in"><div class="th-kicker">' + ic(TH_ICON[ev.type] || 'star') + ' Hospital Town Hall</div>' +
     '<h1>' + esc(ev.title) + '</h1>' + (ev.subtitle ? '<div class="subt">' + esc(ev.subtitle) + '</div>' : '') +
     '<div class="row th-chips">' + evStatusChip(ev.status) + (ev.test ? '<span class="chip warn">' + ic('shield') + ' โหมดทดสอบ — เห็นเฉพาะผู้ทดสอบ · ข้อมูลจะถูกล้างก่อนใช้งานจริง</span>' : '') + (chips || '') + '</div>' +
     (ev.description ? '<p class="desc">' + esc(ev.description) + '</p>' : '') + (extra || '') + '</div>' + thValues() + '</div>';
@@ -40,7 +41,8 @@ function thCard(ev) {
     btn = r ? 'ทำแบบประเมิน / ดู' : 'ดูกำหนดการ';
     meta = '<span>' + ic('clock') + ' ' + esc(cfg.timeText || thHHMM(cfg.checkinOpenAt)) + '</span><span>' + ic('building') + ' ' + esc(String(cfg.venue || '').split(' ชั้น')[0]) + '</span>';
   }
-  return '<a class="evcard th-card" href="#/event/' + esc(ev.id) + '" style="--ec:' + esc(ev.color) + '"><div class="cover th-cover"><div class="th-coverin">' + ic(TH_ICON[ev.type]) + '<span>Hospital Town Hall</span></div>' +
+  return '<a class="evcard th-card" href="#/event/' + esc(ev.id) + '" style="--ec:' + esc(ev.color) + '"><div class="cover th-cover' + (cfg.image ? ' has-img' : '') + '">' +
+    (cfg.image ? imgTag(cfg.image, ev.title, 'loading="lazy" style="object-fit:' + (cfg.imageFit === 'contain' ? 'contain' : 'cover') + '"') : '<div class="th-coverin">' + ic(TH_ICON[ev.type]) + '<span>Hospital Town Hall</span></div>') +
     '<div class="tag">' + evStatusChip(ev.status) + (ev.test ? ' <span class="chip warn">โหมดทดสอบ</span>' : '') + '</div></div><div class="body"><h3>' + esc(ev.title) + '</h3><div class="meta">' + meta + '</div>' +
     '<div class="mystate">' + st + '<span class="btn sm ' + (!r && ev.status === 'OPEN' ? 'primary' : '') + '">' + btn + ' ' + ic('arrowr') + '</span></div></div></a>';
 }
@@ -1032,6 +1034,16 @@ function thF(label, path, c, opt) {
 function thBox(title, icon, body, sub) { return '<div class="card"><div class="hd"><div><h3>' + ic(icon) + ' ' + title + '</h3>' + (sub ? '<div class="small muted">' + sub + '</div>' : '') + '</div></div><div class="bd">' + body + '</div></div>'; }
 function thEditor(ED) {
   var c = ED.config, m = ED.mail || {}, h = '';
+  // 13 พ.ย. 69: ภาพหน้าปกการ์ด (เหมือนกิจกรรมเสื้อ) — ว่าง = การ์ดสีแดงพร้อมไอคอนแบบเดิม
+  if (c.imageHero == null) c.imageHero = true;
+  h += thBox('ภาพหน้าปกการ์ด', 'upload', '<div class="th-coveredit"><div class="th-coverprev" style="--ec:' + esc(ED.color || '#ED1C24') + '">' +
+      (c.image ? imgTag(c.image, '', 'style="object-fit:' + (c.imageFit === 'contain' ? 'contain' : 'cover') + '"') : '<div class="th-coverin">' + ic(TH_ICON[ED.type] || 'star') + '<span>Hospital Town Hall</span></div>') + '</div>' +
+    '<div style="flex:1;min-width:240px"><div class="row" style="flex-wrap:nowrap"><input class="input" data-tc="image" data-tt="text" id="thCoverIn" value="' + esc(c.image || '') + '" placeholder="ว่าง = การ์ดสีพร้อมไอคอน (แบบเดิม)">' +
+    '<button type="button" class="btn" id="thCoverUp" data-busy="กำลังอัปโหลด…">' + ic('upload') + 'อัปโหลดรูป</button>' + (c.image ? '<button type="button" class="iconbtn" id="thCoverX" title="เอารูปออก">' + ic('x') + '</button>' : '') + '</div>' +
+    '<div class="hint">แนะนำภาพแนวนอน ประมาณ 1200 × 630 พิกเซล (ระบบย่อให้อัตโนมัติ) · ใส่ชื่อไฟล์ใน GitHub หรือ URL ก็ได้ · อัปโหลดแล้วกด "บันทึก"</div>' +
+    '<div class="grid2" style="margin-top:8px">' + thF('การจัดภาพ', 'imageFit', c, { type: 'select', options: [['cover', 'เต็มกรอบ (ตัดขอบเล็กน้อย)'], ['contain', 'แสดงทั้งภาพ (มีพื้นว่างได้)']] }) +
+    '<div>' + thF('แสดงภาพนี้ที่หัวหน้ากิจกรรมด้วย', 'imageHero', c, { type: 'check' }) + '</div></div></div></div>',
+    'แสดงบนการ์ดหน้าแรกของบุคลากร และหัวหน้ากิจกรรม');
   var contact = '<div class="grid2">' + thF('ผู้ประสานงาน', 'contact.name', c) + thF('โทรภายใน', 'contact.phone', c) + '</div>';
   if (ED.type === 'NOMINATE') {
     h += thBox('กติกาการเสนอชื่อ', 'award', '<div class="grid3">' + thF('เสนอได้สูงสุดต่อหมวด (ชื่อ)', 'maxPerCat', c, { type: 'num', min: 1, max: 10 }) + thF('ต้องเสนออย่างน้อย (ชื่อ รวมทุกหมวด)', 'minTotal', c, { type: 'num', min: 1, max: 20 }) + thF('จำนวนอันดับที่ส่งกรรมการ (Top N ต่อหมวด)', 'topN', c, { type: 'num', min: 1, max: 100, hint: 'คะแนนเท่ากันที่อันดับสุดท้ายได้ไปด้วย' }) + '</div>' +
@@ -1113,6 +1125,12 @@ function thReadForm(ED) {
 }
 function thBindEditor(ED, readForm, draw) {
   var c = ED.config, on = function (sel, fn) { $$(sel).forEach(function (b) { b.onclick = function () { readForm(); fn(b); draw(); }; }); };
+  var cu = $('#thCoverUp');
+  if (cu) cu.onclick = function () {
+    if (!ED.id) return toast('กด "บันทึก" กิจกรรมก่อน แล้วจึงอัปโหลดรูป', 'warn');
+    readForm(); uploadImgFlow(ED.id, cu).then(function (ref) { if (ref) { c.image = ref; if (c.imageHero == null) c.imageHero = true; draw(); toast('อัปโหลดรูปปกแล้ว กด "บันทึก" เพื่อใช้รูปนี้', 'ok'); } });
+  };
+  on('#thCoverX', function () { c.image = ''; });
   on('#thCatAdd', function () { c.categories.push({ key: 'N' + (c.categories.length + 1), group: '', label: '', desc: '' }); });
   on('[data-tcdel]', function (b) { c.categories.splice(+b.dataset.tcdel, 1); });
   on('#thExAdd', function () { c.execs.push({ id: 'E' + ('0' + c.execs.length).slice(-2), name: '', position: '', email: '', units: '' }); });

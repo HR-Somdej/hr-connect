@@ -781,3 +781,14 @@ button.chip { font-family: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .login .hero::before { animation: none; } }
 .th-find { margin-bottom: 14px; }
 .th-find .f { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 6px; }
+
+/* 13 พ.ย. 69: ภาพหน้าปกกิจกรรม Town Hall */
+.th-card .th-cover.has-img { background: #f4f1ec; }
+.th-card .th-cover.has-img img { width: 100%; height: 100%; display: block; }
+.th-heropic { height: 220px; background: #f4f1ec; border-bottom: 4px solid var(--th, #ED1C24); }
+.th-heropic img { width: 100%; height: 100%; display: block; }
+@media (max-width: 640px) { .th-heropic { height: 150px; } }
+.th-coveredit { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.th-coverprev { position: relative; width: 260px; height: 136px; border-radius: 12px; overflow: hidden; flex: none; background: linear-gradient(135deg, var(--ec, #ED1C24) 0%, #9e1018 100%); border: 1px solid var(--line); }
+.th-coverprev img { width: 100%; height: 100%; display: block; background: #f4f1ec; }
+.th-coverprev .th-coverin svg.i { width: 34px; height: 34px; }
