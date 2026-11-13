@@ -15,7 +15,7 @@ function thValues() {
 function thHero(ev, chips, extra) {
   return '<div class="th-hero"><div class="th-hero-in"><div class="th-kicker">' + ic(TH_ICON[ev.type] || 'star') + ' Hospital Town Hall</div>' +
     '<h1>' + esc(ev.title) + '</h1>' + (ev.subtitle ? '<div class="subt">' + esc(ev.subtitle) + '</div>' : '') +
-    '<div class="row th-chips">' + evStatusChip(ev.status) + (chips || '') + '</div>' +
+    '<div class="row th-chips">' + evStatusChip(ev.status) + (ev.test ? '<span class="chip warn">' + ic('shield') + ' โหมดทดสอบ — เห็นเฉพาะผู้ทดสอบ · ข้อมูลจะถูกล้างก่อนใช้งานจริง</span>' : '') + (chips || '') + '</div>' +
     (ev.description ? '<p class="desc">' + esc(ev.description) + '</p>' : '') + (extra || '') + '</div>' + thValues() + '</div>';
 }
 function thCrumb() { return '<div class="row between crumbrow"><div class="crumb"><a href="#/">' + ic('arrowl') + ' หน้าแรก</a></div>' + helpBtn() + '</div>'; }
@@ -41,7 +41,7 @@ function thCard(ev) {
     meta = '<span>' + ic('clock') + ' ' + esc(cfg.timeText || thHHMM(cfg.checkinOpenAt)) + '</span><span>' + ic('building') + ' ' + esc(String(cfg.venue || '').split(' ชั้น')[0]) + '</span>';
   }
   return '<a class="evcard th-card" href="#/event/' + esc(ev.id) + '" style="--ec:' + esc(ev.color) + '"><div class="cover th-cover"><div class="th-coverin">' + ic(TH_ICON[ev.type]) + '<span>Hospital Town Hall</span></div>' +
-    '<div class="tag">' + evStatusChip(ev.status) + '</div></div><div class="body"><h3>' + esc(ev.title) + '</h3><div class="meta">' + meta + '</div>' +
+    '<div class="tag">' + evStatusChip(ev.status) + (ev.test ? ' <span class="chip warn">โหมดทดสอบ</span>' : '') + '</div></div><div class="body"><h3>' + esc(ev.title) + '</h3><div class="meta">' + meta + '</div>' +
     '<div class="mystate">' + st + '<span class="btn sm ' + (!r && ev.status === 'OPEN' ? 'primary' : '') + '">' + btn + ' ' + ic('arrowr') + '</span></div></div></a>';
 }
 
@@ -490,48 +490,72 @@ function awExport(committee) {
 var AP = null;
 function awPool(ev) {
   $('#page').innerHTML = skel(3);
-  Promise.all([api('awardPoolInfo', { eventId: ev.id }), api('listPositionMap', { eventId: ev.id })]).then(function (r) {
+  Promise.all([api('awardPoolInfo', { eventId: ev.id, withRows: true }), api('listPositionMap', { eventId: ev.id })]).then(function (r) {
     if (thStale(ev.id, 'pool')) return;
-    AP = { ev: ev, info: r[0], map: r[1], f: (AP && AP.f) || 'all', q: '', changed: {} };
+    var keep = AP && AP.ev.id === ev.id ? AP : null;
+    AP = { ev: ev, info: r[0], map: r[1], f: keep ? keep.f : 'all', q: '', changed: {}, view: keep ? keep.view : 'people', pf: keep ? keep.pf : { q: '', cat: '', st: '', hr: '' }, page: 1 };
     apDraw();
   }).catch(errToast);
 }
+/** 13 พ.ย. 69: ค้นหาแบบหลวม — ไม่สนเว้นวรรค · คำว่า "กลุ่ม" · พิมพ์หลายคำได้ (เช่น "หัวหน้างานพยาบาลวิสัญญี" เจอ "หัวหน้ากลุ่มงานพยาบาลวิสัญญี") */
+function looseKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, '').replace(/กลุ่ม/g, '').replace(/[()\-.]/g, ''); }
+function looseHit(text, q) {
+  if (!q) return true;
+  var t = looseKey(text);
+  return String(q).toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return t.indexOf(looseKey(w)) >= 0; });
+}
+var AP_AUTO = { PASS: ['ok', 'ผ่านครบ'], WARN: ['warn', 'ควรตรวจ'], FAIL: ['danger', 'ไม่ผ่าน'] };
 function apDraw() {
   var ev = AP.ev, s = AP.info.summary, cats = AP.map.categories, opts = cats.map(function (c) { return [c.key, c.key + ' ' + c.label]; }).concat([['X', 'X ไม่อยู่ในหมวด (ผู้บริหาร)']]);
+  var qs = AP.info.qual || { total: 0 };
   var h = pageHead('รายชื่อผู้มีสิทธิ์ได้รับการเสนอชื่อ', 'เจ้าหน้าที่ประจำ/ลูกจ้างประจำ · ' + nf(s.total) + ' คน' + (s.importedAt ? ' · นำเข้าล่าสุด ' + esc(thShort(s.importedAt)) : ''),
-    '<button class="btn" id="apX">' + ic('download') + 'ส่งออกผลตรวจคร่าว ๆ</button><button class="btn primary" id="apI">' + ic('upload') + 'นำเข้าไฟล์ระบบเลื่อนเงินเดือน</button>');
+    '<button class="btn" id="apX">' + ic('download') + 'ส่งออกผลตรวจ</button><button class="btn" id="apQI">' + ic('upload') + 'นำเข้าผลตรวจคุณสมบัติ (ไฟล์ ②)</button><button class="btn primary" id="apI">' + ic('upload') + 'นำเข้ารายชื่อ (ไฟล์ ①)</button>');
   if (!s.total) h += '<div class="announce">' + ic('alert') + '<div><b>ยังไม่มีรายชื่อ</b> — ดาวน์โหลด Google Sheet "QSMH_ระบบเลื่อนเงินเดือน_ฐานข้อมูล" เป็นไฟล์ .xlsx (ไฟล์ › ดาวน์โหลด › Microsoft Excel) แล้วกด "นำเข้า" · ระบบอ่านแผ่น <b>Employees</b> และ <b>Departments</b> ให้เอง</div></div>';
   h += '<div class="announce" style="background:#fff;border-color:var(--line)">' + ic('info') + '<div>รายชื่อนี้ใช้ <b>เลือกผู้ถูกเสนอชื่อตามหมวด</b> · บุคลากรเห็นเฉพาะชื่อ ตำแหน่ง หน่วยงาน (ไม่เห็นผลประเมิน) · <b>ไม่ตัดสิทธิ์ตามผลประเมินล่วงหน้า</b> ระบบใช้ตรวจคุณสมบัติหลังปิดรับเท่านั้น · นำเข้าซ้ำได้เมื่อผลประเมินอัปเดต</div></div>';
   h += '<div class="card"><div class="hd"><h3>' + ic('chart') + ' ตรวจคร่าว ๆ ตามหมวด</h3><span class="small muted">ผ่าน = ผลประเมิน ' + esc(((ev.config || {}).passGrades || ['A', 'B']).join('/')) + ' · อายุงานครบ · ไม่มีหมายเหตุวินัย/พ้นหน้าที่</span></div><div class="tablewrap"><table class="t"><thead><tr><th>หมวด</th><th class="r">ทั้งหมด</th><th class="r">ผลประเมินผ่าน</th><th class="r">ผ่านครบ</th><th class="r">ควรตรวจ</th><th class="r">ไม่ผ่าน</th></tr></thead><tbody>' +
     s.byCat.map(function (c) { return '<tr><td><b>' + esc(c.key) + '</b> ' + esc(c.label) + '</td><td class="r num">' + nf(c.total) + '</td><td class="r num">' + nf(c.gradeOk) + '</td><td class="r num" style="color:var(--ok)">' + (c.key === 'X' ? '–' : nf(c.pass)) + '</td><td class="r num" style="color:var(--warn)">' + (c.key === 'X' ? '–' : nf(c.warn)) + '</td><td class="r num" style="color:var(--danger)">' + (c.key === 'X' ? '–' : nf(c.fail)) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
-  var rows = AP.map.rows.filter(function (r) { return (AP.f === 'all' || (AP.f === 'todo' ? !r.confirmed : AP.f === 'review' ? r.review && !r.confirmed : r.category === AP.f)) && (!AP.q || r.position.indexOf(AP.q) >= 0); });
+  if (qs.total) h += '<div class="announce" style="background:#fff;border-color:var(--line);color:inherit;margin-top:14px">' + ic('check') + '<div><b>ผลตรวจคุณสมบัติรายข้อจาก HR (ไฟล์ ②)</b> ' + nf(qs.total) + ' คน · <span style="color:var(--ok)">ผ่านครบ ' + nf(qs.pass) + '</span> · <span style="color:var(--danger)">ไม่ผ่าน ' + nf(qs.fail) + '</span> · <span style="color:var(--warn)">รอตรวจบางข้อ ' + nf(qs.pending) + '</span> — ระบบใช้ผลนี้แทนการตรวจคร่าว ๆ ในแท็บผลการเสนอชื่อ</div></div>';
+  h += '<div class="seg" id="apV" style="margin:16px 0 0">' + [['people', ic('users') + ' รายชื่อรายคน (' + nf(s.total) + ')'], ['pos', ic('layers') + ' ตาราง ตำแหน่ง → หมวด (' + nf(AP.map.rows.length) + ')']].map(function (x) { return '<button data-v="' + x[0] + '" class="' + (AP.view === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  if (AP.view === 'people') { h += apPeopleHtml(opts); $('#page').innerHTML = h; apBindCommon(ev); apBindPeople(ev, opts); return; }
+  var rows = AP.map.rows.filter(function (r) { return (AP.f === 'all' || (AP.f === 'todo' ? !r.confirmed : AP.f === 'review' ? r.review && !r.confirmed : r.category === AP.f)) && looseHit(r.position, AP.q); });
   var nTodo = AP.map.rows.filter(function (r) { return !r.confirmed; }).length, nRev = AP.map.rows.filter(function (r) { return r.review && !r.confirmed; }).length, nCh = Object.keys(AP.changed).length;
   h += '<div class="card" style="margin-top:16px"><div class="hd"><div><h3>' + ic('layers') + ' ตาราง ตำแหน่ง → หมวด (' + nf(AP.map.rows.length) + ' ตำแหน่ง)</h3><div class="small muted">ระบบใส่หมวดให้อัตโนมัติจากชื่อตำแหน่ง/ระดับแรกบรรจุ · HR ตรวจแล้วกดยืนยันครั้งเดียว · ยังไม่ยืนยัน ' + nf(nTodo) + ' · ควรตรวจ ' + nf(nRev) + '</div></div>' +
     '<div class="row"><button class="btn" id="apAll" ' + (nTodo ? '' : 'disabled') + ' data-busy="กำลังบันทึก…">' + ic('check') + 'ยืนยันทั้งหมด</button><button class="btn primary" id="apSave" ' + (nCh ? '' : 'disabled') + ' data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกที่แก้ (' + nCh + ')</button></div></div>' +
-    '<div class="bd" style="padding-bottom:6px"><div class="filters"><input class="input search" id="apQ" placeholder="ค้นหาตำแหน่ง" value="' + esc(AP.q) + '"><div class="seg" id="apF">' + [['all', 'ทั้งหมด'], ['todo', 'ยังไม่ยืนยัน'], ['review', 'ควรตรวจ']].concat(opts.map(function (o) { return [o[0], o[0]]; })).map(function (x) { return '<button data-f="' + x[0] + '" class="' + (AP.f === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div></div></div>' +
+    '<div class="bd" style="padding-bottom:6px"><div class="filters"><input class="input search" id="apQ" placeholder="ค้นหาตำแหน่ง (พิมพ์บางคำได้ เช่น วิสัญญี)" value="' + esc(AP.q) + '"><div class="seg" id="apF">' + [['all', 'ทั้งหมด'], ['todo', 'ยังไม่ยืนยัน'], ['review', 'ควรตรวจ']].concat(opts.map(function (o) { return [o[0], o[0]]; })).map(function (x) { return '<button data-f="' + x[0] + '" class="' + (AP.f === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div></div></div>' +
     '<div class="tablewrap"><table class="t"><thead><tr><th>ตำแหน่ง</th><th class="r">คน</th><th>ระดับที่พบ</th><th>หมวด</th><th>ที่มา</th></tr></thead><tbody>' +
     rows.map(function (r) {
       var cur = AP.changed[r.position] || r.category;
       return '<tr><td><b>' + esc(r.position) + '</b>' + (r.review && !r.confirmed ? ' <span class="chip warn">ควรตรวจ</span>' : '') + '</td><td class="r num">' + nf(r.count) + '</td><td class="small">' + esc(r.levels) + '</td>' +
         '<td><select class="input" data-pm="' + esc(r.position) + '" style="min-width:220px' + (AP.changed[r.position] ? ';border-color:var(--accent)' : '') + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></td>' +
         '<td class="small">' + (r.confirmed ? '<span class="chip ok">' + ic('check') + ' ยืนยันแล้ว</span> ' : '') + esc(r.category !== r.auto ? 'HR กำหนด (ระบบเสนอ ' + r.auto + ')' : r.reason) + '</td></tr>';
-    }).join('') + '</tbody></table></div></div>';
+    }).join('') + (rows.length ? '' : '<tr><td colspan="5" class="empty">ไม่พบตำแหน่ง "' + esc(AP.q) + '" — ตำแหน่งในไฟล์อาจถูกบันทึกเป็นชื่ออื่น (เช่น "พยาบาล") ลองค้นชื่อคนที่แท็บ <b>รายชื่อรายคน</b></td></tr>') + '</tbody></table></div></div>';
   $('#page').innerHTML = h;
+  apBindCommon(ev);
   $('#apQ').oninput = debounce(function () { AP.q = $('#apQ').value.trim(); apDraw(); var i = $('#apQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300);
   $$('#apF [data-f]').forEach(function (b) { b.onclick = function () { AP.f = b.dataset.f; apDraw(); }; });
   $$('[data-pm]').forEach(function (sl) { sl.onchange = function () { var r = AP.map.rows.filter(function (x) { return x.position === sl.dataset.pm; })[0]; if (sl.value === r.category) delete AP.changed[r.position]; else AP.changed[r.position] = sl.value; apDraw(); }; });
   var save = function (b, rows, all) { busy(b, api('savePositionMap', { eventId: ev.id, rows: rows, confirmAll: all })).then(function () { toast('บันทึกตารางตำแหน่งแล้ว', 'ok'); awPool(ev); }).catch(errToast); };
   $('#apSave').onclick = function () { save(this, Object.keys(AP.changed).map(function (p) { return { position: p, category: AP.changed[p] }; }), false); };
   $('#apAll').onclick = function () { var b = this; confirmBox({ title: 'ยืนยันหมวดทุกตำแหน่ง?', icon: 'check', ok: 'ยืนยันทั้งหมด', msg: 'ตำแหน่งที่ยังไม่ยืนยัน ' + nf(nTodo) + ' ตำแหน่ง (ควรตรวจ ' + nf(nRev) + ') จะใช้หมวดตามที่แสดงอยู่' + (nCh ? ' รวมที่แก้ ' + nCh + ' รายการ' : '') }).then(function (y) { if (y) save(b, Object.keys(AP.changed).map(function (p) { return { position: p, category: AP.changed[p] }; }), true); }); };
+}
+function apBindCommon(ev) {
+  $$('#apV [data-v]').forEach(function (b) { b.onclick = function () { AP.view = b.dataset.v; apDraw(); }; });
   $('#apI').onclick = function () { apImport(ev); };
+  $('#apQI').onclick = function () { apQualImport(ev); };
   $('#apX').onclick = function () {
     var b = this; busy(b, api('awardPoolInfo', { eventId: ev.id, withRows: true })).then(function (x) {
       var AU = { PASS: 'ผ่านครบ', WARN: 'ควรตรวจ', FAIL: 'ไม่ผ่าน' };
-      exportXlsx('ตรวจคุณสมบัติคร่าวๆ_บุคลากรดีเด่น_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'รายชื่อ', rows: [['รหัส', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วยงาน', 'ฝ่าย', 'หมวด', 'ผลประเมิน', 'วันบรรจุ', 'ระบบตรวจ', 'ประเด็น', 'หมายเหตุ']].concat(x.rows.map(function (r) { var o = r.slice(); o[8] = r[5] === 'X' ? 'ไม่อยู่ในหมวด' : AU[r[8]]; return o; })) }]);
+      var HR = { PASS: 'ผ่าน', FAIL: 'ไม่ผ่าน', '': 'รอตรวจ' };
+      exportXlsx('รายชื่อผู้มีสิทธิ์_และผลตรวจ_บุคลากรดีเด่น_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'รายชื่อ', rows: [['รหัส', 'ชื่อ-สกุล', 'ตำแหน่ง', 'ระดับ', 'หน่วยงาน', 'ฝ่าย', 'หมวด', 'หมวดกำหนดเฉพาะคน', 'ผลประเมิน', 'วันบรรจุ', 'ผลตรวจ', 'ประเด็น', 'HR 2.1', 'HR 2.2', 'HR 2.3', 'HR 2.4', 'HR 2.5', 'หมายเหตุ']].concat(x.rows.map(function (r) {
+        var hr = r[12] ? r[12].split(',') : null;
+        return [r[0], r[1], r[2], r[13], r[3], r[4], r[5], r[11] ? 'ใช่' + (r[14] ? ' (' + r[14] + ')' : '') : '', r[6], r[7], AU[r[8]] || r[8], r[9]].concat(hr ? hr.map(function (v) { return HR[v] || v; }) : ['', '', '', '', '']).concat([r[10]]);
+      })), widths: [10, 26, 26, 9, 24, 24, 6, 14, 8, 11, 9, 50, 7, 7, 7, 7, 7, 30] }]);
     }).catch(errToast);
   };
 }
 function cellYmd(v) {
+  // 13 พ.ย. 69: SheetJS (cellDates) ใน Asia/Bangkok อาจได้เวลา 23:59:xx ของวันก่อนหน้า → ปัดด้วย +12 ชม. กันวันที่คลาด 1 วัน
+  if (v instanceof Date && !isNaN(v)) v = new Date(v.getTime() + 12 * 3600 * 1000);
   if (v instanceof Date && !isNaN(v)) { var z = function (n) { return ('0' + n).slice(-2); }; return v.getFullYear() + '-' + z(v.getMonth() + 1) + '-' + z(v.getDate()); }
   return v == null ? '' : String(v).trim();
 }
@@ -583,6 +607,107 @@ function apImport(ev) {
         toast('กำลังนำเข้า…', 'info');
         return api('importAwardPool', { eventId: ev.id, rows: x.rows, fileName: file.name }).then(function (r) {
           toast('นำเข้า ' + nf(r.total) + ' คน' + (r.newPositions.length ? ' · ตำแหน่งใหม่ ' + r.newPositions.length + ' (ตรวจหมวดในตาราง)' : '') + (r.badRows ? ' · ข้าม ' + r.badRows + ' แถว' : ''), 'ok', 'นำเข้าเรียบร้อย');
+          awPool(ev);
+        });
+      });
+    }).catch(errToast);
+  });
+}
+
+/* ---------- 13 พ.ย. 69: รายชื่อรายคน · หมวดเฉพาะคน · นำเข้าผลตรวจคุณสมบัติ (ไฟล์ ②) ---------- */
+function apRows() { var c = AP.info.cols; return (AP.info.rows || []).map(function (r) { var o = {}; c.forEach(function (k, i) { o[k] = r[i]; }); return o; }); }
+function apPeopleHtml(opts) {
+  var f = AP.pf, all = apRows(), size = 50;
+  var list = all.filter(function (o) {
+    if (f.cat && o.cat !== f.cat) return false;
+    if (f.st && o.auto !== f.st) return false;
+    if (f.hr === 'has' && !o.hr) return false; if (f.hr === 'none' && o.hr) return false; if (f.hr === 'own' && !o.own) return false;
+    return looseHit(o.empCode + ' ' + o.name + ' ' + o.position + ' ' + o.unit + ' ' + o.division + ' ' + o.remark, f.q);
+  });
+  var pages = Math.max(1, Math.ceil(list.length / size)); if (AP.page > pages) AP.page = pages;
+  var slice = list.slice((AP.page - 1) * size, AP.page * size), HRC = { PASS: ['ok', '✓'], FAIL: ['danger', '✗'], '': ['', '?'] };
+  return '<div class="card" style="margin-top:12px"><div class="hd"><div><h3>' + ic('users') + ' รายชื่อรายคน — ตรวจว่าใครอยู่หมวดไหน</h3><div class="small muted">ค้นด้วยชื่อ รหัส ตำแหน่ง หน่วยงาน หรือหมายเหตุ (เช่น "วิสัญญี") · กดปุ่มหมวดเพื่อย้ายหมวดเฉพาะคน</div></div></div>' +
+    '<div class="bd" style="padding-bottom:6px"><div class="filters"><input class="input search" id="ppQ" placeholder="ค้นหาชื่อ / รหัส / ตำแหน่ง / หน่วยงาน" value="' + esc(f.q) + '">' +
+    '<select class="input" id="ppC"><option value="">ทุกหมวด</option>' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (f.cat === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>' +
+    '<select class="input" id="ppS">' + [['', 'ผลตรวจทุกแบบ'], ['PASS', 'ผ่านครบ'], ['WARN', 'ควรตรวจ'], ['FAIL', 'ไม่ผ่าน']].map(function (x) { return '<option value="' + x[0] + '"' + (f.st === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select>' +
+    '<select class="input" id="ppH">' + [['', 'ทั้งหมด'], ['has', 'มีผลตรวจจาก HR (ไฟล์ ②)'], ['none', 'ยังไม่มีผลตรวจจาก HR'], ['own', 'HR กำหนดหมวดเฉพาะคน']].map(function (x) { return '<option value="' + x[0] + '"' + (f.hr === x[0] ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></div>' +
+    '<div class="small muted" style="margin:4px 0 8px">พบ <b>' + nf(list.length) + '</b> คน</div></div>' +
+    '<div class="tablewrap"><table class="t"><thead><tr><th>รหัส</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง · หน่วยงาน</th><th>หมวด</th><th>เกรด</th><th>บรรจุ</th><th>ผลตรวจ</th><th>HR 2.1–2.5</th></tr></thead><tbody>' +
+    (slice.length ? slice.map(function (o) {
+      var a = AP_AUTO[o.auto] || ['', o.auto], hr = o.hr ? o.hr.split(',') : null;
+      return '<tr><td class="num">' + esc(o.empCode) + '</td><td><b>' + esc(o.name) + '</b></td><td class="small">' + esc(o.position) + (o.level ? ' · ' + esc(o.level) : '') + '<br><span class="muted">' + esc(o.unit || o.division) + '</span>' + (o.remark ? '<br><span class="muted">หมายเหตุ: ' + esc(o.remark) + '</span>' : '') + '</td>' +
+        '<td><button class="chip acc" data-pc="' + esc(o.empCode) + '" title="เปลี่ยนหมวดเฉพาะคน">' + esc(o.cat) + (o.own ? ' ✎' : '') + '</button>' + (o.own ? '<div class="small muted">HR กำหนดเฉพาะคน</div>' : '') + '</td>' +
+        '<td>' + esc(o.grade || '–') + '</td><td class="small num">' + esc(o.startDate || '–') + '</td>' +
+        '<td><span class="chip ' + a[0] + '" title="' + esc(o.issues || '') + '">' + a[1] + '</span>' + (o.issues ? '<div class="small muted" style="max-width:260px">' + esc(o.issues) + '</div>' : '') + '</td>' +
+        '<td class="small">' + (hr ? hr.map(function (v, i) { var c = HRC[v] || HRC['']; return '<span class="chip ' + c[0] + '" title="ข้อ 2.' + (i + 1) + '">' + c[1] + '</span>'; }).join('') : '<span class="muted">–</span>') + '</td></tr>';
+    }).join('') : '<tr><td colspan="8" class="empty">ไม่พบรายชื่อ</td></tr>') + '</tbody></table></div>' +
+    (pages > 1 ? '<div class="row" style="justify-content:center;padding:12px"><button class="btn sm" id="ppPrev"' + (AP.page <= 1 ? ' disabled' : '') + '>' + ic('arrowl') + '</button><span class="small">หน้า ' + AP.page + ' / ' + pages + '</span><button class="btn sm" id="ppNext"' + (AP.page >= pages ? ' disabled' : '') + '>' + ic('arrowr') + '</button></div>' : '') + '</div>';
+}
+function apBindPeople(ev, opts) {
+  var f = AP.pf, re = function () { AP.page = 1; apDraw(); };
+  $('#ppQ').oninput = debounce(function () { f.q = $('#ppQ').value.trim(); re(); var i = $('#ppQ'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300);
+  $('#ppC').onchange = function () { f.cat = this.value; re(); };
+  $('#ppS').onchange = function () { f.st = this.value; re(); };
+  $('#ppH').onchange = function () { f.hr = this.value; re(); };
+  var pv = $('#ppPrev'), nx = $('#ppNext');
+  if (pv) pv.onclick = function () { AP.page--; apDraw(); window.scrollTo(0, 0); };
+  if (nx) nx.onclick = function () { AP.page++; apDraw(); window.scrollTo(0, 0); };
+  $$('[data-pc]').forEach(function (b) {
+    b.onclick = function () {
+      var o = apRows().filter(function (x) { return x.empCode === b.dataset.pc; })[0];
+      var m = modal({ title: 'หมวดของ ' + esc(o.name), body: '<div class="small muted" style="margin-bottom:8px">' + esc(o.position) + ' · ' + esc(o.unit || o.division) + '<br>ปกติระบบจัดหมวดตาม<b>ตำแหน่ง</b> (แก้ทั้งตำแหน่งได้ที่ "ตาราง ตำแหน่ง → หมวด") · ใช้ช่องนี้เมื่อ<b>คนนี้คนเดียว</b>ต้องอยู่หมวดอื่น</div>' +
+        '<div class="field"><label class="f">หมวด</label><select class="input" id="pcC"><option value="">— ตามตำแหน่ง (ค่าตั้งต้น) —</option>' + opts.map(function (x) { return '<option value="' + x[0] + '"' + (o.own && o.cat === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="field"><label class="f">เหตุผล (บันทึกไว้ตรวจสอบ)</label><input class="input" id="pcR" value="' + esc(o.ownReason || '') + '" placeholder="เช่น หัวหน้ากลุ่มงานพยาบาลวิสัญญี → หมวดพยาบาล"></div>',
+        foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="pcOk" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
+      $('#pcOk').onclick = function () {
+        busy(this, api('savePersonCat', { eventId: ev.id, empCode: o.empCode, category: $('#pcC').value, reason: $('#pcR').value.trim() })).then(function (r) {
+          m.close(); toast(o.name + ' → หมวด ' + r.category + (r.own ? ' (เฉพาะคน)' : ' (ตามตำแหน่ง)'), 'ok'); awPool(ev);
+        }).catch(errToast);
+      };
+    };
+  });
+}
+/** อ่านไฟล์ ② ผลตรวจคุณสมบัติ: แผ่นที่มีคอลัมน์ "รหัสประจำตัว" และ "2.1 …" – "2.5 …" */
+function readQualFile(file) {
+  return loadXLSX().then(function (X) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        try {
+          var wb = X.read(new Uint8Array(fr.result), { type: 'array' }), got = null;
+          wb.SheetNames.forEach(function (n) {
+            if (got) return;
+            var aoa = X.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: false, blankrows: false });
+            for (var i = 0; i < Math.min(15, aoa.length); i++) {
+              var hd = (aoa[i] || []).map(function (c) { return String(c).replace(/\s+/g, ' ').trim(); });
+              var code = hd.findIndex(function (h) { return /^(รหัสประจำตัว|รหัสบุคลากร|รหัสพนักงาน|EmpCode)$/i.test(h); });
+              var q = ['2.1', '2.2', '2.3', '2.4', '2.5'].map(function (k) { return hd.findIndex(function (h) { return h.indexOf(k) === 0; }); });
+              if (code >= 0 && q.every(function (x) { return x >= 0; })) { got = { hd: hd, rows: aoa.slice(i + 1), code: code, q: q }; break; }
+            }
+          });
+          if (!got) throw new Error('ไม่พบแผ่นที่มีคอลัมน์ "รหัสประจำตัว" และ "2.1" – "2.5" (แผ่น ผลตรวจคุณสมบัติ)');
+          var col = function (re) { return got.hd.findIndex(function (h) { return re.test(h); }); }, cn = col(/^เหตุผล|^หมายเหตุ/), cb = col(/^ผู้ตรวจ/), cd = col(/^วันที่ตรวจ/);
+          res({ rows: got.rows.filter(function (r) { return String(r[got.code] || '').trim(); }).map(function (r) {
+            return { empCode: String(r[got.code]).trim(), q: got.q.map(function (j) { return String(r[j] || '').trim(); }), note: cn >= 0 ? String(r[cn] || '').trim() : '', by: cb >= 0 ? String(r[cb] || '').trim() : '', date: cd >= 0 ? String(r[cd] || '').trim() : '' };
+          }) });
+        } catch (e) { rej(new Error('อ่านไฟล์ไม่ได้: ' + e.message)); }
+      };
+      fr.onerror = function () { rej(new Error('อ่านไฟล์ไม่ได้')); };
+      fr.readAsArrayBuffer(file);
+    });
+  });
+}
+function apQualImport(ev) {
+  pickFile('.xlsx,.xls').then(function (file) {
+    if (!file) return;
+    toast('กำลังอ่านไฟล์…', 'info');
+    readQualFile(file).then(function (x) {
+      var n = { p: 0, f: 0, w: 0 }; x.rows.forEach(function (r) { var q = r.q.map(function (v) { return /^ไม่ผ่าน/.test(v) ? 'F' : /^ผ่าน/.test(v) ? 'P' : ''; }); if (q.indexOf('F') >= 0) n.f++; else if (q.every(function (v) { return v === 'P'; })) n.p++; else n.w++; });
+      return confirmBox({ title: 'นำเข้าผลตรวจ ' + nf(x.rows.length) + ' คน?', icon: 'upload', ok: 'นำเข้า', msg: esc(file.name) + '<br>ผ่านครบ 5 ข้อ ' + nf(n.p) + ' · ไม่ผ่านบางข้อ ' + nf(n.f) + ' · รอตรวจบางข้อ ' + nf(n.w) +
+        '<br><b>แทนที่ผลตรวจที่นำเข้าก่อนหน้าทั้งหมด</b> · ผลที่ HR กดในแท็บผลการเสนอชื่อไม่หาย' }).then(function (y) {
+        if (!y) return;
+        return api('importAwardQual', { eventId: ev.id, rows: x.rows, fileName: file.name, replace: true }).then(function (r) {
+          toast('นำเข้า ' + nf(r.total) + ' คน · ผ่านครบ ' + nf(r.pass) + ' · ไม่ผ่าน ' + nf(r.fail) + ' · รอตรวจ ' + nf(r.pending) + (r.notInPool ? ' · ไม่พบในรายชื่อ ' + r.notInPool : ''), 'ok', 'นำเข้าผลตรวจแล้ว');
           awPool(ev);
         });
       });

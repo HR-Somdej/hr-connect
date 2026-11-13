@@ -258,7 +258,7 @@ function exportXlsx(filename, sheets) {
     toast('ดาวน์โหลด ' + filename, 'ok', 'ส่งออกไฟล์แล้ว');
   });
 }
-/** อ่านไฟล์ Excel/CSV → [{header: value}] ของชีทที่มีคอลัมน์รหัสพนักงาน (ไม่พบ = ชีทแรก) */
+/** อ่านไฟล์ Excel/CSV → [{header: value}] ของชีทที่มีคอลัมน์รหัสบุคลากร (ไม่พบ = ชีทแรก) */
 function readSheetFile(file) {
   return loadXLSX().then(function (X) {
     return new Promise(function (res, rej) {
@@ -266,8 +266,8 @@ function readSheetFile(file) {
       fr.onload = function () {
         try {
           var wb = X.read(new Uint8Array(fr.result), { type: 'array', cellDates: false, raw: false });
-          // เลือกชีทที่มีหัวคอลัมน์รหัสพนักงาน (ไฟล์อาจมีแผ่น "อ่านก่อน" อยู่หน้าแรก) และหาแถวหัวตารางใน 15 แถวแรก
-          var KEY = /^(empcode|emp code|รหัสพนักงาน|รหัสประจำตัว|เลขประจำตัวบุคลากร|รหัส)$/i, pick = null;
+          // เลือกชีทที่มีหัวคอลัมน์รหัสบุคลากร (ไฟล์อาจมีแผ่น "อ่านก่อน" อยู่หน้าแรก) และหาแถวหัวตารางใน 15 แถวแรก
+          var KEY = /^(empcode|emp code|รหัสบุคลากร|รหัสพนักงาน|รหัสประจำตัว|เลขประจำตัวบุคลากร|รหัส)$/i, pick = null;
           wb.SheetNames.some(function (n) {
             var aoa = X.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', raw: false, blankrows: false });
             for (var i = 0; i < Math.min(15, aoa.length); i++) {
@@ -349,6 +349,7 @@ function navItems() {
     items.push({ sec: 'ระบบ (ผู้ดูแลสูงสุด)' });
     items.push({ k: 'admin/roster', href: '#/admin/roster', icon: 'user', label: 'รายชื่อบุคลากร' });
     items.push({ k: 'admin/heads', href: '#/admin/heads', icon: 'building', label: 'หัวหน้าฝ่าย/หน่วย' });
+    items.push({ k: 'admin/testlab', href: '#/admin/testlab', icon: 'shield', label: 'โหมดทดสอบก่อนใช้งานจริง' });
     items.push({ k: 'admin/settings', href: '#/admin/settings', icon: 'settings', label: 'ตั้งค่าระบบ' });
   }
   items.push({ sec: 'ช่วยเหลือ' }, { k: 'manual', href: manualRoleUrl(isAdmin() ? 'admin' : isHead() ? 'head' : 'staff'), icon: 'book', label: 'คู่มือการใช้งาน', ext: true });

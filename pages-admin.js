@@ -145,7 +145,7 @@ function exportWorkbook(x) {
   sheets.push({ name: 'สรุปรายฝ่าย', rows: pivot('ฝ่าย', function (r) { return r.division; }) });
   sheets.push({ name: 'สรุปรายหน่วย', rows: pivot('หน่วย', function (r) { return (r.unit || '-') + ' (' + r.division + ')'; }) });
   sheets.push({ name: 'สรุปรายตำแหน่ง', rows: pivot('ตำแหน่ง', function (r) { return r.position; }) });
-  var head = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วย', 'ฝ่าย', 'กลุ่ม', 'สถานะ', 'แบบ', 'ไซซ์', 'จำนวน', 'สั่งเพิ่ม', 'บันทึกล่าสุด', 'HR บันทึกแทน', 'หมายเหตุ'].concat(contact ? ['โทรศัพท์', 'อีเมล'] : []);
+  var head = ['ลำดับ', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วย', 'ฝ่าย', 'กลุ่ม', 'สถานะ', 'แบบ', 'ไซซ์', 'จำนวน', 'สั่งเพิ่ม', 'บันทึกล่าสุด', 'HR บันทึกแทน', 'หมายเหตุ'].concat(contact ? ['โทรศัพท์', 'อีเมล'] : []);
   function list(filter) {
     var out = [head], n = 0;
     rows.filter(filter).forEach(function (r) {
@@ -175,7 +175,7 @@ function exportPickWorkbook(x) {
     Object.keys(m).sort().forEach(function (k) { var g = m[k]; out.push([k, g.t, g.o, g.dc, g.p, g.t ? Math.round((g.o + g.dc) * 1000 / g.t) / 10 : '-'].concat(used.map(function (it) { return g.s[it.key] || 0; }))); });
     return out;
   };
-  var head = ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วยที่ปฏิบัติงาน', 'ฝ่ายที่ปฏิบัติงาน', 'ฝ่ายต้นสังกัด (HRMi)', 'กลุ่ม', 'สถานะ', 'รายการที่เลือก', 'ตัวเลือกที่มีสิทธิ์', 'บันทึกล่าสุด', 'หมายเหตุ'].concat(contact ? ['มือถือ', 'เบอร์ภายใน', 'อีเมล'] : []);
+  var head = ['ลำดับ', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วยที่ปฏิบัติงาน', 'ฝ่ายที่ปฏิบัติงาน', 'ฝ่ายต้นสังกัด (HRMi)', 'กลุ่ม', 'สถานะ', 'รายการที่เลือก', 'ตัวเลือกที่มีสิทธิ์', 'บันทึกล่าสุด', 'หมายเหตุ'].concat(contact ? ['มือถือ', 'เบอร์ภายใน', 'อีเมล'] : []);
   var list = function (f) { var out = [head], n = 0; rows.filter(f).forEach(function (r) { out.push([++n, r.empCode, r.name, r.position, r.unit, r.division, r.hrmiDivision, r.group, stx(r), r.status === 'ORDERED' && IT[r.optKey] ? IT[r.optKey].label : '', String(r.opts || '').split(',').filter(Boolean).map(function (k) { return IT[k] ? IT[k].label : k; }).join(' | '), r.updatedAt ? thDate(r.updatedAt) : '', r.note].concat(contact ? [r.phone, r.extPhone, r.email] : [])); }); return out; };
   return exportXlsx('สรุป_' + ev.title.replace(/[\\\/:*?"<>|]/g, '').slice(0, 40) + '_' + localIso().slice(0, 10) + '.xlsx', [
     { name: 'สรุปยอดต่อรายการ', rows: sum, widths: [7, 10, 60, 10, 16, 18] },
@@ -325,7 +325,7 @@ function drawBulkBar() {
 }
 function exportTrackList(list) {
   var ev = TR.ev, contact = TR.data.canSeeContact;
-  var rows = [['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วย', 'ฝ่าย', 'กลุ่ม', 'สถานะ', 'แบบ', 'ไซซ์', 'บันทึกล่าสุด'].concat(contact ? ['โทรศัพท์', 'อีเมล'] : [])];
+  var rows = [['ลำดับ', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วย', 'ฝ่าย', 'กลุ่ม', 'สถานะ', 'แบบ', 'ไซซ์', 'บันทึกล่าสุด'].concat(contact ? ['โทรศัพท์', 'อีเมล'] : [])];
   var IT = pickItems(ev);
   list.forEach(function (r, i) { var o = (ev.config.options || []).filter(function (x) { return x.key === r.optKey; })[0]; rows.push([i + 1, r.empCode, r.name, r.position, r.unit, r.division, r.group, r.target || r.status ? stTh(ev, r.status) : 'นอกเป้าหมาย', ev.type === 'PICK' ? (IT[r.optKey] ? IT[r.optKey].label : '') : (o ? o.label : ''), r.sizeCode, r.updatedAt ? thDate(r.updatedAt) : ''].concat(contact ? [r.phone, r.email] : [])); });
   exportXlsx('รายชื่อ_' + (TR.f.status === 'pending' ? 'ยังไม่ตอบ_' : '') + (TR.f.div || 'ทั้งหมด').slice(0, 30) + '_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'รายชื่อ', rows: rows }]).catch(errToast);
@@ -474,9 +474,13 @@ function drawMail(id) {
     ['ADMIN_SUMMARY', 'chart', 'สรุปภาพรวมถึงผู้ดูแล', 'ตัวเลขรวม ยอดต่อรายการ/ไซซ์ และฝ่ายที่ยังค้าง ถึงผู้ดูแลสูงสุดและผู้ดูแลกิจกรรมนี้ที่มีอีเมล', 'adminSummary', true]
   ];
   var h = pageHead('อีเมลติดตาม', esc(ev.title), eventPicker(id, 'mail'), 'อีเมล');
+  // 13 พ.ย. 69: แจ้งสถานะโหมดทดสอบ · ข้อความอีเมลแก้ได้
+  if (ev.test) h += '<div class="announce tl-on">' + ic('shield') + '<div><b>กิจกรรมนี้อยู่ในโหมดทดสอบ</b> — "ส่งตอนนี้" ส่งเฉพาะผู้ทดสอบ + อีเมลทดสอบ (หัวเรื่อง [ทดสอบ]) · บุคลากรอื่นไม่ได้รับ · ตัวตั้งเวลาไม่ส่งอัตโนมัติ' + (isSuper() ? ' · <a href="#/admin/testlab">ตั้งค่าโหมดทดสอบ</a>' : '') + '</div></div>';
+  else if (th && (mc.announce || mc.remindStaff)) h += '<div class="announce">' + ic('alert') + '<div><b>อีเมลอัตโนมัติเปิดอยู่</b> — เมื่อกิจกรรมเผยแพร่และถึงวันเปิดรับ ระบบจะส่งถึง<b>บุคลากรทุกคน</b>ตามรอบที่ตั้งไว้ · ถ้าจะทดลองระบบ ให้ใช้ ' + (isSuper() ? '<a href="#/admin/testlab">โหมดทดสอบ</a>' : 'โหมดทดสอบ (ผู้ดูแลสูงสุด)') + ' ก่อน</div></div>';
+  var TPLK = function (t) { return t === 'ANNOUNCE' ? 'ANNOUNCE' : t === 'REMIND_STAFF' && th ? 'REMIND_' + ev.type : t === 'CONFIRM' && ev.type === 'NOMINATE' ? 'CONFIRM_NOMINATE' : ''; };
   h += '<div class="mailcards">' + cards.map(function (c) {
     return '<div class="mailcard"><div class="row between"><div class="ic">' + ic(c[1]) + '</div><label class="switch" title="ส่งอัตโนมัติ"><input type="checkbox" data-auto="' + c[4] + '" ' + (mc[c[4]] ? 'checked' : '') + '><span class="tr"></span><span class="small">' + (c[0] === 'CONFIRM' ? 'เปิดใช้' : 'ส่งตามรอบ') + '</span></label></div>' +
-      '<h4>' + c[2] + '</h4><p>' + c[3] + '</p><div class="row"><button class="btn sm" data-pv="' + c[0] + '">' + ic('eye') + 'ดูตัวอย่าง</button>' + (c[5] ? '<button class="btn sm" data-test="' + c[0] + '">' + ic('send') + 'ส่งทดสอบ</button><button class="btn sm primary" data-send="' + c[0] + '">ส่งตอนนี้</button>' : '') + '</div></div>';
+      '<h4>' + c[2] + '</h4><p>' + c[3] + '</p><div class="row"><button class="btn sm" data-pv="' + c[0] + '">' + ic('eye') + 'ดูตัวอย่าง</button>' + (TPLK(c[0]) ? '<button class="btn sm" data-tpl="' + c[0] + '">' + ic('edit') + 'แก้ข้อความ</button>' : '') + (c[5] ? '<button class="btn sm" data-test="' + c[0] + '">' + ic('send') + 'ส่งทดสอบ</button><button class="btn sm primary" data-send="' + c[0] + '">ส่งตอนนี้</button>' : '') + '</div></div>';
   }).join('') + '</div>';
   if (ev.type === 'ORDER') h += '<div class="card pad small muted" style="margin-top:18px">' + ic('info') + ' กด "บันทึกการตั้งค่า" หลังเปิด/ปิดสวิตช์ <button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…" style="margin-left:8px">' + ic('check') + 'บันทึกการตั้งค่า</button><span class="hide"><select id="mHour"><option value="9">9</option></select><select id="mBefore"><option value="0">0</option></select></span></div>';
   else h += '<div class="card" style="margin-top:18px"><div class="hd"><h3>' + ic('calendar') + ' รอบส่งอัตโนมัติ</h3><button class="btn primary sm" id="mSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกการตั้งค่า</button></div><div class="bd"><div class="grid3">' +
@@ -494,6 +498,7 @@ function drawMail(id) {
   };
   loadLog(); $('#mLogR').onclick = loadLog;
   $$('[data-pv]').forEach(function (b) { b.onclick = function () { previewMail(id, b.dataset.pv); }; });
+  $$('[data-tpl]').forEach(function (b) { b.onclick = function () { mailTplEditor(ev, b.dataset.tpl, TPLK(b.dataset.tpl)); }; });
   $$('[data-test]').forEach(function (b) {
     b.onclick = function () {
       var me = ''; try { me = localStorage.getItem('hrc_testmail') || ''; } catch (e) { }
@@ -527,6 +532,34 @@ function drawMail(id) {
     busy(this, api('saveEvent', { event: e2 })).then(function () { ev.mail = mail; toast('บันทึกการตั้งค่าอีเมลแล้ว', 'ok'); }).catch(errToast);
   };
   $$('[data-auto]').forEach(function (c) { c.onchange = function () { toast('กด "บันทึกการตั้งค่า" เพื่อยืนยัน', 'info'); }; });
+}
+/** 13 พ.ย. 69: แก้ข้อความอีเมล (หัวเรื่อง · หัวข้อ · ย่อหน้าเปิด · ข้อความท้าย · ปุ่ม) · ช่องว่าง = ข้อความตั้งต้น */
+function mailTplEditor(ev, type, key) {
+  var m = modal({ title: 'แก้ข้อความอีเมล · ' + MAIL_TH[type], size: 'lg', body: skel(1) });
+  api('getMailTpl', { eventId: ev.id }).then(function (d) {
+    var it = d.items.filter(function (x) { return x.key === key; })[0]; if (!it) { m.close(); return toast('อีเมลนี้แก้ข้อความไม่ได้', 'warn'); }
+    var cur = {}; d.fields.forEach(function (f) { cur[f[0]] = it.cur[f[0]] || ''; });
+    var big = { intro: 1, note: 1 };
+    $('.mb', m.el).innerHTML = '<div class="small muted" style="margin-bottom:10px">' + ic('info') + ' ช่องที่เว้นว่าง = ใช้ข้อความตั้งต้น (แสดงจาง ๆ ในช่อง) · กด <b>ใช้ข้อความตั้งต้นมาแก้</b> เพื่อคัดลอกมาแก้ต่อ · ตัวแปร: ' +
+      d.vars.map(function (v) { return '<code>{' + esc(v) + '}</code>'; }).join(' ') + ' · <code>**ข้อความ**</code> = ตัวหนา · ขึ้นบรรทัดใหม่ได้</div>' +
+      d.fields.map(function (f) {
+        var df = it.def[f[0]] || '';
+        return '<div class="field"><div class="row between"><label class="f">' + esc(f[1]) + '</label><button type="button" class="linkbtn small" data-cp="' + f[0] + '">ใช้ข้อความตั้งต้นมาแก้</button></div>' +
+          (big[f[0]] ? '<textarea class="input" rows="4" data-tf="' + f[0] + '" placeholder="' + esc(df) + '">' + esc(cur[f[0]]) + '</textarea>' : '<input class="input" data-tf="' + f[0] + '" placeholder="' + esc(df) + '" value="' + esc(cur[f[0]]) + '">') + '</div>';
+      }).join('') + '<div class="row"><button class="btn" id="tpPv" data-busy="กำลังสร้างตัวอย่าง…">' + ic('eye') + 'ดูตัวอย่าง (ยังไม่บันทึก)</button></div><div id="tpOut" style="margin-top:10px"></div>';
+    $('.mf', m.el).innerHTML = '<button class="btn" data-x>ปิด</button><button class="btn" id="tpDef" data-busy="กำลังบันทึก…">กลับเป็นข้อความตั้งต้นทั้งหมด</button><button class="btn primary" id="tpSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึกข้อความ</button>';
+    $$('[data-x]', m.el).forEach(function (x) { x.onclick = m.close; });
+    var read = function () { var o = {}; $$('[data-tf]', m.el).forEach(function (x) { if (x.value.trim()) o[x.dataset.tf] = x.value.trim(); }); return o; };
+    $$('[data-cp]', m.el).forEach(function (b) { b.onclick = function () { var x = $('[data-tf="' + b.dataset.cp + '"]', m.el); if (!x.value.trim()) x.value = it.def[b.dataset.cp] || ''; x.focus(); }; });
+    $('#tpPv').onclick = function () {
+      busy(this, api('previewMail', { eventId: ev.id, type: type, tplDraft: { key: key, tpl: read() } })).then(function (pv) {
+        $('#tpOut').innerHTML = '<div class="small muted" style="margin-bottom:6px"><b>หัวเรื่อง:</b> ' + esc(pv.subject) + '</div><iframe class="mailframe" id="tpFrame"></iframe>'; $('#tpFrame').srcdoc = pv.html;
+      }).catch(errToast);
+    };
+    var save = function (b, tpl, msg) { busy(b, api('saveMailTpl', { eventId: ev.id, key: key, tpl: tpl })).then(function () { ev.mail = ev.mail || {}; ev.mail.tpl = ev.mail.tpl || {}; if (Object.keys(tpl).length) ev.mail.tpl[key] = tpl; else delete ev.mail.tpl[key]; m.close(); toast(msg, 'ok'); }).catch(errToast); };
+    $('#tpSave').onclick = function () { save(this, read(), 'บันทึกข้อความอีเมลแล้ว · มีผลกับอีเมลฉบับถัดไป'); };
+    $('#tpDef').onclick = function () { var b = this; confirmBox({ title: 'กลับเป็นข้อความตั้งต้น?', msg: 'ข้อความที่แก้ไว้ของอีเมลนี้จะถูกลบ', ok: 'กลับเป็นค่าตั้งต้น' }).then(function (y) { if (y) save(b, {}, 'กลับเป็นข้อความตั้งต้นแล้ว'); }); };
+  }).catch(function (e) { m.close(); errToast(e); });
 }
 function previewMail(id, type) {
   var m = modal({ title: 'ตัวอย่าง · ' + MAIL_TH[type], size: 'lg', body: skel(1) });
@@ -582,7 +615,7 @@ function editEvent(id) {
         (ED.type === 'PICK' ? eligibilityCard(ED, isNew) : '<div class="card"><div class="hd"><h3>ผู้มีสิทธิ์เข้าร่วม</h3></div><div class="bd"><div class="seg" id="audMode"><button class="' + (a.mode !== 'FILTER' ? 'on' : '') + '" data-m="ALL">บุคลากรทุกคน</button><button class="' + (a.mode === 'FILTER' ? 'on' : '') + '" data-m="FILTER">เฉพาะกลุ่ม</button></div>' +
         '<div id="audBox" style="margin-top:12px;' + (a.mode === 'FILTER' ? '' : 'display:none') + '"><div class="field"><label class="f">ฝ่าย (ชื่อเต็ม คั่นด้วยบรรทัด)</label><textarea class="input" data-a="divisions" placeholder="รพ.สมเด็จฯ - ฝ่ายการพยาบาล">' + esc((a.divisions || []).join('\n')) + '</textarea></div>' +
         '<div class="grid2"><div class="field"><label class="f">กลุ่มบุคลากร</label><textarea class="input" data-a="groups">' + esc((a.groups || []).join('\n')) + '</textarea></div><div class="field"><label class="f">ตำแหน่ง</label><textarea class="input" data-a="positions">' + esc((a.positions || []).join('\n')) + '</textarea></div></div>' +
-        '<div class="field"><label class="f">รหัสพนักงานเพิ่มเติม (คั่นด้วย , หรือบรรทัด)</label><textarea class="input" data-a="codes">' + esc((a.codes || []).join('\n')) + '</textarea><div class="hint">เงื่อนไขต่างหมวดต้องตรงทุกข้อ · รหัสที่ระบุได้สิทธิ์เสมอ</div></div></div></div>') + '</div></div>' +
+        '<div class="field"><label class="f">รหัสบุคลากรเพิ่มเติม (คั่นด้วย , หรือบรรทัด)</label><textarea class="input" data-a="codes">' + esc((a.codes || []).join('\n')) + '</textarea><div class="hint">เงื่อนไขต่างหมวดต้องตรงทุกข้อ · รหัสที่ระบุได้สิทธิ์เสมอ</div></div></div></div>') + '</div></div>' +
         '<div class="stack">' + (isTh(ED) ? thEditor(ED) : ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : ED.type === 'PICK' ? pickEditor(c) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
       $('#page').innerHTML = h;
       bindEditor();
@@ -767,7 +800,7 @@ function drawRosterTable() {
 function personModal(p) {
   var isNew = !p; p = p || { status: 'ACTIVE' };
   var f = function (k, label, extra) { return '<div class="field"><label class="f">' + label + '</label><input class="input" data-pf="' + k + '" value="' + esc(p[k] || '') + '" ' + (extra || '') + '></div>'; };
-  var body = (isNew ? '<div class="row" style="align-items:flex-end;margin-bottom:6px"><div class="field" style="flex:1;margin:0"><label class="f">รหัสพนักงาน *</label><input class="input" data-pf="empCode" inputmode="numeric"></div><button class="btn" id="pfLook" data-busy="กำลังค้น…">' + ic('search') + 'ดึงข้อมูลจาก API</button></div><div class="hint small muted" style="margin-bottom:12px">สำหรับพนักงานใหม่ที่ยังไม่อยู่ในไฟล์ HRMi · ถ้า API ไม่พบ กรอกเองได้ (บุคคลนั้นจะเข้าระบบเองไม่ได้จนกว่า HR บันทึกในระบบหลัก — ให้ HR บันทึกแทน)</div>'
+  var body = (isNew ? '<div class="row" style="align-items:flex-end;margin-bottom:6px"><div class="field" style="flex:1;margin:0"><label class="f">รหัสบุคลากร *</label><input class="input" data-pf="empCode" inputmode="numeric"></div><button class="btn" id="pfLook" data-busy="กำลังค้น…">' + ic('search') + 'ดึงข้อมูลจาก API</button></div><div class="hint small muted" style="margin-bottom:12px">สำหรับพนักงานใหม่ที่ยังไม่อยู่ในไฟล์ HRMi · ถ้า API ไม่พบ กรอกเองได้ (บุคคลนั้นจะเข้าระบบเองไม่ได้จนกว่า HR บันทึกในระบบหลัก — ให้ HR บันทึกแทน)</div>'
     : '<div class="row" style="margin-bottom:12px"><div class="avatar">' + esc(initials(p.firstName)) + '</div><div><b>' + esc(rName(p)) + '</b><div class="small muted">' + esc(p.empCode) + ' · ที่มา ' + esc(p.source) + (p.apiSyncedAt ? ' · ซิงก์ ' + esc(thShort(p.apiSyncedAt)) : '') + '</div></div></div>' +
       (p.flag ? '<div class="announce" style="margin-bottom:12px">' + ic('info') + '<div>ธง: <b>' + esc(FLAG_TH[p.flag]) + '</b> ' + (p.flag === 'NOT_IN_API' ? '— อาจพ้นสภาพแล้ว ตรวจสอบก่อนเปลี่ยนสถานะเป็น "ไม่ใช้งาน"' : '') + ' <label class="switch" style="margin-left:8px"><input type="checkbox" id="pfClear"><span class="tr"></span>ตรวจแล้ว (ลบธง)</label></div></div>' : '')) +
     '<div class="grid3">' + f('title', 'คำนำหน้า') + f('firstName', 'ชื่อ *') + f('lastName', 'นามสกุล') + '</div>' +
@@ -781,7 +814,7 @@ function personModal(p) {
   var m = modal({ title: isNew ? 'เพิ่มบุคลากร' : 'แก้ไขข้อมูลบุคลากร', size: 'lg', body: body, foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="pfSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
   var lk = $('#pfLook');
   if (lk) lk.onclick = function () {
-    var code = $('[data-pf=empCode]').value.trim(); if (!code) return toast('กรอกรหัสพนักงานก่อน', 'warn');
+    var code = $('[data-pf=empCode]').value.trim(); if (!code) return toast('กรอกรหัสบุคลากรก่อน', 'warn');
     busy(lk, api('lookupPerson', { empCode: code })).then(function (r) {
       if (r.inRoster) return toast('รหัสนี้มีในรายชื่อแล้ว: ' + rName(r.inRoster), 'warn');
       if (!r.api) return toast('ไม่พบใน API — กรอกข้อมูลเองได้', 'warn');
@@ -806,7 +839,7 @@ function exportSelfEdits(list) {
 function importWorkFlow() {
   var go = function (file) {
     return readSheetFile(file).then(function (raw) {
-      var rows = raw.map(function (r) { return { empCode: pickCol(r, ['EmpCode', 'รหัสพนักงาน', 'รหัสประจำตัว']).replace(/\D/g, ''), workDivision: pickCol(r, ['ฝ่ายที่ปฏิบัติงาน', 'WorkDivision']), workUnit: pickCol(r, ['หน่วยที่ปฏิบัติงาน', 'WorkUnit']) }; }).filter(function (r) { return r.empCode; });
+      var rows = raw.map(function (r) { return { empCode: pickCol(r, ['EmpCode', 'รหัสบุคลากร', 'รหัสพนักงาน', 'รหัสประจำตัว']).replace(/\D/g, ''), workDivision: pickCol(r, ['ฝ่ายที่ปฏิบัติงาน', 'WorkDivision']), workUnit: pickCol(r, ['หน่วยที่ปฏิบัติงาน', 'WorkUnit']) }; }).filter(function (r) { return r.empCode; });
       if (!rows.length) return toast('ไม่พบคอลัมน์ EmpCode ในไฟล์', 'warn');
       confirmBox({ title: 'อัปเดตฝ่าย/หน่วยที่ปฏิบัติงาน ' + nf(rows.length) + ' คน?', icon: 'building', ok: 'นำเข้า', msg: 'หัวหน้าฝ่าย/หน่วยจะเห็นบุคลากรตามที่ปฏิบัติงานจริง · ช่องว่างทั้งคู่ = กลับไปใช้ตาม HRMi' }).then(function (y) {
         if (y) api('importWorkUnits', { rows: rows, fileName: file.name }).then(function (r) { toast('อัปเดต ' + nf(r.updated) + ' คน' + (r.missing ? ' · ไม่พบในรายชื่อ ' + nf(r.missing) : ''), 'ok', 'นำเข้าฝ่ายที่ปฏิบัติงานแล้ว'); ROUTES['admin/roster'](); }).catch(errToast);
@@ -828,7 +861,7 @@ function resetPwFlow(emp, name, after) {
   $('#rpGo').onclick = function () {
     busy(this, api('adminResetPassword', { empCode: emp, reason: $('#rpWhy').value.trim() })).then(function (r) {
       m.close();
-      var msg = 'รหัสผ่านชั่วคราวของท่านคือ ' + r.temp + ' (ใช้ได้ถึง ' + thDate(r.expiresAt) + ') เข้า SOMDEJ HR Connect ด้วยรหัสพนักงาน + รหัสนี้ แล้วระบบจะให้ตั้งรหัสใหม่';
+      var msg = 'รหัสผ่านชั่วคราวของท่านคือ ' + r.temp + ' (ใช้ได้ถึง ' + thDate(r.expiresAt) + ') เข้า SOMDEJ HR Connect ด้วยรหัสบุคลากร + รหัสนี้ แล้วระบบจะให้ตั้งรหัสใหม่';
       modal({ title: ic('check') + ' ออกรหัสชั่วคราวแล้ว', body: '<div class="center"><div class="small muted">รหัสผ่านชั่วคราวของ ' + esc(name || emp) + '</div><div class="tempw num">' + esc(r.temp) + '</div><div class="small muted">ใช้ได้ถึง ' + esc(thDate(r.expiresAt)) + ' · ตัวพิมพ์เล็ก/ใหญ่ต้องตรง · แสดงครั้งเดียว</div></div>' +
         '<div class="field" style="margin-top:14px"><label class="f">ข้อความสำหรับส่งให้เจ้าตัว</label><textarea class="input" readonly style="min-height:84px">' + esc(msg) + '</textarea></div>',
         foot: '<button class="btn" id="tpCopy">' + ic('copy') + 'คัดลอกข้อความ</button><button class="btn primary" data-x>เสร็จแล้ว</button>', sticky: true });
@@ -845,7 +878,7 @@ ROUTES['admin/helpdesk'] = function () {
   setAccent('#8E4B9D');
   var b = S.boot.brand || {};
   var h = pageHead('ช่วยเหลือบุคลากร', 'บุคลากรโทร/ทัก LINE มาแจ้งลืมรหัสผ่าน หรือเข้าระบบไม่ได้', '', 'ช่วยเหลือ');
-  h += '<div class="dgrid"><div class="stack"><div class="card"><div class="hd"><h3>' + ic('search') + ' ค้นหาบุคลากร</h3></div><div class="bd"><form id="hdForm" class="row" style="flex-wrap:nowrap"><input class="input" id="hdCode" inputmode="numeric" placeholder="รหัสพนักงาน" style="flex:1"><button class="btn primary" id="hdGo" data-busy="กำลังค้น…">' + ic('search') + 'ค้นหา</button></form><div id="hdRes" style="margin-top:14px"></div></div></div></div>' +
+  h += '<div class="dgrid"><div class="stack"><div class="card"><div class="hd"><h3>' + ic('search') + ' ค้นหาบุคลากร</h3></div><div class="bd"><form id="hdForm" class="row" style="flex-wrap:nowrap"><input class="input" id="hdCode" inputmode="numeric" placeholder="รหัสบุคลากร" style="flex:1"><button class="btn primary" id="hdGo" data-busy="กำลังค้น…">' + ic('search') + 'ค้นหา</button></form><div id="hdRes" style="margin-top:14px"></div></div></div></div>' +
     '<div class="stack"><div class="card pad small"><h3 style="font-size:16px;margin-bottom:8px">' + ic('info') + ' ขั้นตอนช่วยเหลือ</h3><ol class="helpsteps">' +
     ['<b>มีอีเมลในระบบ</b> → แนะนำให้กด "ลืมรหัสผ่าน" ที่หน้าเข้าสู่ระบบ ระบบส่งรหัสยืนยันทางอีเมลเอง (ไม่ต้องรีเซ็ตให้)', '<b>ไม่มีอีเมล / ไม่ได้รับอีเมล</b> → ยืนยันตัวตนผู้ขอ แล้วกด "รีเซ็ตรหัสผ่าน" ได้รหัสชั่วคราว 72 ชม.', 'แจ้งรหัสชั่วคราวทางโทรศัพท์/LINE → เจ้าตัวเข้าระบบแล้วตั้งรหัสใหม่เอง', '<b>ยังไม่เคยตั้งรหัส</b> → ให้เลือกแท็บ "เข้าครั้งแรก (เลขบัตร)" · แนะนำให้เพิ่มอีเมลในหน้าแรกเพื่อกู้รหัสเองครั้งหน้า']
       .map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><div class="helptips"><b>' + ic('shield') + ' ข้อห้าม</b><ul><li>ห้ามขอเลขบัตรประชาชนหรือรหัสผ่านเดิมของบุคลากร</li><li>ผู้ดูแลกิจกรรมรีเซ็ตได้เฉพาะบุคลากรทั่วไป · ผู้ดูแล/หัวหน้า ให้ผู้ดูแลสูงสุดรีเซ็ต</li><li>ทุกการรีเซ็ตบันทึกประวัติ และส่งอีเมลแจ้งเจ้าตัว (ถ้ามีอีเมล)</li></ul></div>' +
@@ -871,7 +904,7 @@ ROUTES['admin/helpdesk'] = function () {
 var TITLES = ['แพทย์หญิง', 'นายแพทย์', 'ทันตแพทย์หญิง', 'ทันตแพทย์', 'เภสัชกรหญิง', 'เภสัชกร', 'นางสาว', 'นาง', 'นาย', 'ว่าที่ร้อยตรีหญิง', 'ว่าที่ร้อยตรี', 'ว่าที่ ร.ต.', 'ดร.', 'พว.', 'นพ.', 'พญ.', 'ทพ.', 'ทพญ.', 'ภก.', 'ภญ.', 'น.ส.'];
 function pickCol(row, names) { for (var i = 0; i < names.length; i++) { if (row.hasOwnProperty(names[i]) && String(row[names[i]]).trim() !== '') return String(row[names[i]]).trim(); } return ''; }
 function mapImportRow(r) {
-  var code = pickCol(r, ['EmpCode', 'รหัสพนักงาน', 'รหัส', 'empCode']).replace(/\D/g, '');
+  var code = pickCol(r, ['EmpCode', 'รหัสบุคลากร', 'รหัสพนักงาน', 'รหัส', 'empCode']).replace(/\D/g, '');
   var title = pickCol(r, ['Title', 'คำนำหน้า']), fn = pickCol(r, ['FirstName', 'ชื่อ']), ln = pickCol(r, ['LastName', 'นามสกุล']);
   var full = pickCol(r, ['FullName', 'ชื่อ-สกุล', 'ชื่อ-นามสกุล', 'ชื่อสกุล']);
   if (full && !fn) {
@@ -902,7 +935,7 @@ function importRosterFlow() {
       var nNew = valid.filter(function (r) { return !existing[r.empCode]; }).length;
       var divs = uniq(valid, 'division');
       var body = '<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + [['ในไฟล์', raw.length], ['นำเข้าได้', valid.length], ['ใหม่', nNew], ['ปรับปรุง', valid.length - nNew]].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num" style="font-size:24px">' + nf(k[1]) + '</b></div>'; }).join('') + '</div>' +
-        (raw.length - valid.length - dup > 0 ? '<div class="announce">' + ic('alert') + '<div>ข้าม ' + (raw.length - valid.length - dup) + ' แถวที่ไม่มีรหัสพนักงาน</div></div>' : '') + (dup ? '<div class="announce">' + ic('alert') + '<div>รหัสซ้ำในไฟล์ ' + dup + ' แถว (ใช้แถวแรก)</div></div>' : '') +
+        (raw.length - valid.length - dup > 0 ? '<div class="announce">' + ic('alert') + '<div>ข้าม ' + (raw.length - valid.length - dup) + ' แถวที่ไม่มีรหัสบุคลากร</div></div>' : '') + (dup ? '<div class="announce">' + ic('alert') + '<div>รหัสซ้ำในไฟล์ ' + dup + ' แถว (ใช้แถวแรก)</div></div>' : '') +
         '<div class="small muted" style="margin-bottom:6px">' + divs.length + ' ฝ่าย · สถานะไม่ใช้งาน ' + ina + ' คน · ตัวอย่าง 5 แถวแรก</div><div class="tablewrap"><table class="t"><thead><tr><th>รหัส</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>หน่วย</th><th>ฝ่าย</th><th>กลุ่ม</th></tr></thead><tbody>' +
         valid.slice(0, 5).map(function (r) { return '<tr><td class="num">' + esc(r.empCode) + '</td><td>' + esc(r.title + r.firstName + ' ' + r.lastName) + '</td><td>' + esc(r.position) + '</td><td>' + esc(r.unit) + '</td><td class="small">' + esc(r.division) + '</td><td class="small">' + esc(r.empGroup) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
         '<div class="stack" style="margin-top:14px"><label class="switch"><input type="checkbox" id="imDeact"><span class="tr"></span>ตั้ง "ไม่ใช้งาน" ให้คนที่มาจาก HRMi เดิมแต่ไม่อยู่ในไฟล์นี้ (ใช้เมื่อไฟล์เป็นรายชื่อครบทั้ง รพ.)</label>' +
@@ -928,7 +961,7 @@ function rosterTemplate() {
   exportXlsx('เทมเพลตนำเข้ารายชื่อ_SOMDEJ_HR_Connect.xlsx', [
     { name: 'รายชื่อ', rows: [['EmpCode', 'FullName', 'PositionName', 'DivisionName', 'WardName', 'HireName', 'LevelName', 'WorkingStatus', 'Gender', 'Phone', 'Email'],
       ['5600001', 'นาย ตัวอย่าง ข้อมูลสมมติ', 'เจ้าหน้าที่บริหารงานทั่วไป', 'รพ.สมเด็จฯ - ฝ่ายทรัพยากรบุคคล', 'งานบริหารงานบุคคล', 'เจ้าหน้าที่สภากาชาดไทย ประเภท ก', 'เจ้าหน้าที่ ระดับ 4', 'ทำงาน', 'M', '', '']] },
-    { name: 'คำอธิบาย', rows: [['คอลัมน์', 'ความหมาย', 'จำเป็น'], ['EmpCode', 'รหัสพนักงาน (ตัวเลข)', 'ใช่'], ['FullName', 'คำนำหน้า ชื่อ นามสกุล (หรือใช้ Title / FirstName / LastName แยกคอลัมน์)', 'ใช่'],
+    { name: 'คำอธิบาย', rows: [['คอลัมน์', 'ความหมาย', 'จำเป็น'], ['EmpCode', 'รหัสบุคลากร (ตัวเลข)', 'ใช่'], ['FullName', 'คำนำหน้า ชื่อ นามสกุล (หรือใช้ Title / FirstName / LastName แยกคอลัมน์)', 'ใช่'],
       ['PositionName', 'ตำแหน่ง', ''], ['DivisionName', 'ฝ่าย (ชื่อเต็มตาม HRMi)', 'แนะนำ'], ['WardName', 'หน่วย/งาน', 'แนะนำ'], ['HireName', 'กลุ่มบุคลากร', ''], ['LevelName', 'ระดับ', ''],
       ['WorkingStatus', 'ทำงาน / ลาออก / พ้นสภาพ (ว่าง = ทำงาน)', ''], ['Gender', 'M / F (ว่าง = เดาจากคำนำหน้า และอัปเดตจาก API)', ''], ['Phone, Email', 'ว่างได้ — ระบบดึงจาก SmartAPI', ''],
       [], ['หมายเหตุ', 'ไฟล์ export จาก HRMi (emEmployee) นำเข้าได้ทันทีโดยไม่ต้องแก้ไข · ระบบไม่อ่านคอลัมน์ IdentityCard', '']] }
@@ -962,7 +995,7 @@ function drawHeads(d) {
     b.onclick = function () { var x = d.heads.filter(function (y) { return y.id === b.dataset.hd; })[0]; confirmBox({ title: 'ลบ ' + (x.name || x.email) + '?', msg: 'ออกจากหัวหน้า ' + esc(x.scopeShort), danger: true, ok: 'ลบ' }).then(function (y) { if (y) api('deleteHead', { id: x.id }).then(function (r) { toast('ลบแล้ว', 'ok'); drawHeads(r); }).catch(errToast); }); };
   });
   $('#hdTpl').onclick = function () {
-    var rows = [['รหัสพนักงาน', 'ชื่อ-สกุล', 'อีเมล', 'ระดับ (ฝ่าย/หน่วย)', 'ฝ่ายหรือหน่วยที่ดูแล', 'สถานะ (ใช้งาน/ปิด)']];
+    var rows = [['รหัสบุคลากร', 'ชื่อ-สกุล', 'อีเมล', 'ระดับ (ฝ่าย/หน่วย)', 'ฝ่ายหรือหน่วยที่ดูแล', 'สถานะ (ใช้งาน/ปิด)']];
     d.heads.forEach(function (x) { rows.push([x.empCode, x.name, x.email, x.level === 'UNIT' ? 'หน่วย' : 'ฝ่าย', x.scopeShort, x.active ? 'ใช้งาน' : 'ปิด']); });
     missing.forEach(function (x) { rows.push(['', '', '', 'ฝ่าย', x.short, 'ใช้งาน']); });
     exportXlsx('หัวหน้าฝ่าย_หน่วย_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'หัวหน้า', rows: rows }, { name: 'รายชื่อฝ่าย', rows: [['ฝ่าย', 'จำนวนบุคลากร']].concat(d.divisions.map(function (x) { return [x.short, x.count]; })) }, { name: 'รายชื่อหน่วย', rows: [['หน่วย', 'จำนวนบุคลากร']].concat(d.units.map(function (x) { return [x.name, x.count]; })) }]).catch(errToast);
@@ -971,9 +1004,9 @@ function drawHeads(d) {
     pickFile('.xlsx,.xls,.csv').then(function (file) {
       if (!file) return;
       return readSheetFile(file).then(function (raw) {
-        var rows = raw.map(function (r) { return { empCode: pickCol(r, ['รหัสพนักงาน', 'EmpCode']), name: pickCol(r, ['ชื่อ-สกุล', 'Name']), email: pickCol(r, ['อีเมล', 'Email']), level: /หน่วย|UNIT/i.test(pickCol(r, ['ระดับ (ฝ่าย/หน่วย)', 'ระดับ', 'Level'])) ? 'UNIT' : 'DIVISION', scope: pickCol(r, ['ฝ่ายหรือหน่วยที่ดูแล', 'Scope']), active: !/ปิด|false|0/i.test(pickCol(r, ['สถานะ (ใช้งาน/ปิด)', 'สถานะ', 'Active'])) }; })
+        var rows = raw.map(function (r) { return { empCode: pickCol(r, ['รหัสบุคลากร', 'รหัสพนักงาน', 'EmpCode']), name: pickCol(r, ['ชื่อ-สกุล', 'Name']), email: pickCol(r, ['อีเมล', 'Email']), level: /หน่วย|UNIT/i.test(pickCol(r, ['ระดับ (ฝ่าย/หน่วย)', 'ระดับ', 'Level'])) ? 'UNIT' : 'DIVISION', scope: pickCol(r, ['ฝ่ายหรือหน่วยที่ดูแล', 'Scope']), active: !/ปิด|false|0/i.test(pickCol(r, ['สถานะ (ใช้งาน/ปิด)', 'สถานะ', 'Active'])) }; })
           .filter(function (r) { return r.scope && (r.empCode || r.email); });
-        if (!rows.length) return toast('ไม่พบแถวที่มีทั้ง "ฝ่ายหรือหน่วยที่ดูแล" และ "รหัสพนักงาน/อีเมล"', 'warn');
+        if (!rows.length) return toast('ไม่พบแถวที่มีทั้ง "ฝ่ายหรือหน่วยที่ดูแล" และ "รหัสบุคลากร/อีเมล"', 'warn');
         var m = modal({ title: 'นำเข้าหัวหน้า ' + rows.length + ' รายการ', body: '<p class="muted">จากไฟล์ ' + esc(file.name) + '</p><label class="switch"><input type="checkbox" id="hdRep"><span class="tr"></span>แทนที่รายการเดิมทั้งหมด</label>',
           foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="hdGo" data-busy="กำลังนำเข้า…">นำเข้า</button>' });
         $('#hdGo').onclick = function () { busy(this, api('importHeads', { rows: rows, replace: $('#hdRep').checked, fileName: file.name })).then(function (r) { m.close(); toast('นำเข้าหัวหน้า ' + rows.length + ' รายการ', 'ok'); drawHeads(r); }).catch(errToast); };
@@ -983,7 +1016,7 @@ function drawHeads(d) {
 }
 function headModal(x, d) {
   x = x || { level: 'DIVISION', active: true };
-  var body = '<div class="grid2"><div class="field"><label class="f">รหัสพนักงาน</label><input class="input" id="hmCode" value="' + esc(x.empCode || '') + '" inputmode="numeric"><div class="hint">มีรหัส = เข้าระบบดูรายงานของสังกัดได้</div></div><div class="field"><label class="f">ชื่อ-สกุล</label><input class="input" id="hmName" value="' + esc(x.name || '') + '" placeholder="ว่าง = ดึงจากรายชื่อ"></div></div>' +
+  var body = '<div class="grid2"><div class="field"><label class="f">รหัสบุคลากร</label><input class="input" id="hmCode" value="' + esc(x.empCode || '') + '" inputmode="numeric"><div class="hint">มีรหัส = เข้าระบบดูรายงานของสังกัดได้</div></div><div class="field"><label class="f">ชื่อ-สกุล</label><input class="input" id="hmName" value="' + esc(x.name || '') + '" placeholder="ว่าง = ดึงจากรายชื่อ"></div></div>' +
     '<div class="field"><label class="f">อีเมล (รับสรุป)</label><input class="input" id="hmEmail" type="email" value="' + esc(x.email || '') + '" placeholder="name@redcross.or.th"></div>' +
     '<div class="grid2"><div class="field"><label class="f">ระดับ</label><select class="input" id="hmLevel"><option value="DIVISION">ฝ่าย</option><option value="UNIT" ' + (x.level === 'UNIT' ? 'selected' : '') + '>หน่วย</option></select></div>' +
     '<div class="field"><label class="f">ฝ่าย/หน่วยที่ดูแล</label><input class="input" id="hmScope" list="dlScope" value="' + esc(x.scope || '') + '"></div></div>' +
@@ -1043,7 +1076,7 @@ function settingsApi(d) {
     sf('apiBase', 'URL หลัก', s.apiBase) + sf('apiEmpPath', 'Path ข้อมูลพนักงาน + ตรวจ Cid', s.apiEmpPath, { hint: 'ตอนนี้ยังเป็น /uat/ — เมื่อไอทีประกาศ production แก้ที่นี่ได้เลย' }) +
     '<label class="switch"><input type="checkbox" data-st="nightlySync" ' + (s.nightlySync !== 'FALSE' ? 'checked' : '') + '><span class="tr"></span>ซิงก์เบอร์/อีเมล/เพศ ทุกคืน 01:00</label>' +
     '<div class="row" style="margin-top:16px"><button class="btn" id="apiTest" data-busy="กำลังทดสอบ…">' + ic('link') + 'ทดสอบการเชื่อมต่อ</button><span id="apiRes" class="small"></span></div></div></div>' +
-    '<div class="card pad small"><h3 style="font-size:16px;margin-bottom:8px">วิธีเข้าสู่ระบบของบุคลากร</h3><p class="muted">หน้าเว็บส่งรหัสพนักงาน + เลขบัตรประชาชน → หลังบ้าน (Apps Script) เรียก <code>emp-info</code> พร้อม <code>{"Empcode","Cid"}</code> → ผ่านเมื่อ <code>islogin = true</code> เท่านั้น</p>' +
+    '<div class="card pad small"><h3 style="font-size:16px;margin-bottom:8px">วิธีเข้าสู่ระบบของบุคลากร</h3><p class="muted">หน้าเว็บส่งรหัสบุคลากร + เลขบัตรประชาชน → หลังบ้าน (Apps Script) เรียก <code>emp-info</code> พร้อม <code>{"Empcode","Cid"}</code> → ผ่านเมื่อ <code>islogin = true</code> เท่านั้น</p>' +
     '<p class="muted">ระบบไม่บันทึกเลขบัตรประชาชน · ผิด 5 ครั้งพัก 10 นาที · จดจำ 7 วัน · ถ้า API ไม่ตอบ ผู้ใช้จะเห็นข้อความให้ลองใหม่/ติดต่อ HR</p></div></div>';
   saveSettingsBtn($('#stBody'));
   $('#apiTest').onclick = function () { busy(this, api('testApi', {})).then(function (r) { $('#apiRes').innerHTML = '<span class="chip ok">token ' + esc(r.token) + '</span> <span class="chip ok">' + esc(r.empInfo) + '</span>'; toast('เชื่อมต่อ SmartAPI สำเร็จ', 'ok'); }).catch(function (e) { $('#apiRes').innerHTML = '<span class="chip danger">' + esc(e.message) + '</span>'; errToast(e); }); };
@@ -1062,7 +1095,7 @@ function settingsAdmins() {
     $('#stBody').innerHTML = h;
     var edit = function (a) {
       a = a || { role: 'ADMIN', active: true, events: [] };
-      var m = modal({ title: a.empCode ? 'แก้ไขผู้ดูแล' : 'เพิ่มผู้ดูแล', size: 'md', body: '<div class="field"><label class="f">รหัสพนักงาน</label><input class="input" id="aeCode" value="' + esc(a.empCode || '') + '" ' + (a.empCode ? 'readonly' : '') + ' inputmode="numeric"></div>' +
+      var m = modal({ title: a.empCode ? 'แก้ไขผู้ดูแล' : 'เพิ่มผู้ดูแล', size: 'md', body: '<div class="field"><label class="f">รหัสบุคลากร</label><input class="input" id="aeCode" value="' + esc(a.empCode || '') + '" ' + (a.empCode ? 'readonly' : '') + ' inputmode="numeric"></div>' +
         '<div class="grid2"><div class="field"><label class="f">บทบาท</label><select class="input" id="aeRole"><option value="ADMIN">ผู้ดูแลกิจกรรม</option><option value="SUPER" ' + (a.role === 'SUPER' ? 'selected' : '') + '>ผู้ดูแลสูงสุด</option></select></div><div class="field"><label class="f">อีเมล (รับสรุปภาพรวม)</label><input class="input" id="aeEmail" type="email" value="' + esc(a.email || '') + '"></div></div>' +
         '<div class="field" id="aeEvBox"><label class="f">กิจกรรมที่จัดการได้</label><div class="evchecks">' + d.events.map(function (e) { return '<label class="docopt' + ((a.events || []).indexOf(e.id) >= 0 ? ' on' : '') + '"><input type="checkbox" data-aev="' + esc(e.id) + '" ' + ((a.events || []).indexOf(e.id) >= 0 ? 'checked' : '') + '><span><b>' + esc(e.title) + '</b><small>' + esc(e.id) + ' · ' + esc({ OPEN: 'เปิดรับ', UPCOMING: 'ยังไม่เปิด', CLOSED: 'ปิดรับแล้ว', DRAFT: 'ฉบับร่าง' }[e.status] || e.status) + '</small></span></label>'; }).join('') + '</div></div>' +
         '<label class="switch"><input type="checkbox" id="aeAct" ' + (a.active !== false ? 'checked' : '') + '><span class="tr"></span>ใช้งาน</label>', foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="aeSave" data-busy="กำลังบันทึก…">บันทึก</button>' });
@@ -1113,7 +1146,7 @@ ROUTES['admin/ev'] = function (params, q) {
     document.title = ev.title + ' · ' + tabs.filter(function (t) { return t[0] === tab; })[0][1];
     $('#evbar').innerHTML = '<div class="evbar" style="--ec:' + esc(ev.color) + '">' + (isAdmin() ? '<a class="crumb" href="#/admin/events" style="text-decoration:none">' + ic('arrowl') + ' กิจกรรมทั้งหมด</a>' : '') +
       '<div class="row between" style="align-items:flex-start;margin-top:4px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="evicon">' + ic(ev.type === 'ORDER' ? 'shirt' : ev.type === 'NOMINATE' ? 'award' : ev.type === 'QUESTION' ? 'chat' : ev.type === 'CHECKIN' ? 'qr' : 'layers') + '</span><div><h1>' + esc(ev.title) + '</h1>' +
-      '<div class="row small muted" style="gap:8px;margin-top:4px">' + evStatusChip(ev.status) + '<span class="chip">' + esc(TYPE_TH[ev.type] || ev.type) + '</span><span>' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.audience && ev.audience.mode === 'FILTER' ? '<span>' + ic('users') + ' เฉพาะกลุ่ม</span>' : ev.audience && ev.audience.mode === 'LIST' ? '<span>' + ic('users') + ' ตามรายชื่อ' + (ev.eligible ? ' ' + nf(ev.eligible) + ' คน' : '') + '</span>' : '') + (!canEv(ev.id) ? '<span class="chip info">ดูอย่างเดียว (หัวหน้า)</span>' : '') + '</div></div></div>' +
+      '<div class="row small muted" style="gap:8px;margin-top:4px">' + evStatusChip(ev.status) + testChip(ev) + '<span class="chip">' + esc(TYPE_TH[ev.type] || ev.type) + '</span><span>' + ic('calendar') + ' ' + esc(thDate(ev.openAt, false)) + ' – ' + esc(thDate(ev.closeAt)) + '</span>' + (ev.audience && ev.audience.mode === 'FILTER' ? '<span>' + ic('users') + ' เฉพาะกลุ่ม</span>' : ev.audience && ev.audience.mode === 'LIST' ? '<span>' + ic('users') + ' ตามรายชื่อ' + (ev.eligible ? ' ' + nf(ev.eligible) + ' คน' : '') + '</span>' : '') + (!canEv(ev.id) ? '<span class="chip info">ดูอย่างเดียว (หัวหน้า)</span>' : '') + '</div></div></div>' +
       '<div class="row">' + (isAdmin() && (AD.events || []).length > 1 ? '<select class="input" id="wsSwitch" style="width:auto;min-height:38px">' + AD.events.map(function (e) { return '<option value="' + esc(e.id) + '" ' + (e.id === ev.id ? 'selected' : '') + '>' + esc(e.title) + '</option>'; }).join('') + '</select>' : '') +
       helpBtn() + '<a class="btn sm" href="#/event/' + esc(ev.id) + '">' + ic('eye') + 'มุมมองบุคลากร</a></div></div>' +
       '<div class="tabs" style="margin:14px 0 0;border:0">' + tabs.map(function (t) { return '<a href="#/admin/ev/' + esc(ev.id) + '/' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '">' + ic(t[2]) + t[1] + '</a>'; }).join('') + '</div></div>';
@@ -1133,7 +1166,7 @@ function orderSettingsHtml(c) {
     '<div class="grid2"><div class="field"><label class="f">ข้อความถึงผู้โอน</label><input class="input" id="pyNote" value="' + esc(p.note || '') + '"></div><div class="field"><label class="f">สั่งได้สูงสุดต่อคำสั่งซื้อ (0 = ไม่จำกัด)</label><input class="input" type="number" min="0" data-c="maxPerOrder" value="' + esc(c.maxPerOrder || 0) + '"></div></div>' +
     '<h4 style="margin:6px 0 10px">' + ic('send') + ' ค่าส่ง</h4><label class="switch" style="margin-bottom:10px"><input type="checkbox" id="shOn" ' + (sh.enabled ? 'checked' : '') + '><span class="tr"></span>คิดค่าส่ง (ปิด = รวมส่งทั้ง รพ. ไม่มีค่าส่ง)</label>' +
     '<div class="grid2"><div class="field"><label class="f">ชื่อรายการค่าส่ง</label><input class="input" id="shLabel" value="' + esc(sh.label || 'ค่าส่ง EMS') + '"></div><div class="field"><label class="f">ตารางค่าส่ง (บรรทัดละ "จำนวน,ค่าส่ง")</label><textarea class="input" id="shTable" style="min-height:90px">' + esc((sh.table || []).map(function (r) { return r[0] + ',' + r[1]; }).join('\n')) + '</textarea><div class="hint">เกินตาราง = ค่าส่งแถวสุดท้าย +10 บาท/ตัว</div></div></div>' +
-    '<div class="small muted">' + ic('info') + ' รายชื่อผู้ที่สั่งได้: ตั้งที่กล่อง "ผู้มีสิทธิ์เข้าร่วม" ด้านซ้าย (เฉพาะกลุ่ม › รหัสพนักงาน) หรือแท็บ คำสั่งซื้อ › รายชื่อที่อนุญาต</div>';
+    '<div class="small muted">' + ic('info') + ' รายชื่อผู้ที่สั่งได้: ตั้งที่กล่อง "ผู้มีสิทธิ์เข้าร่วม" ด้านซ้าย (เฉพาะกลุ่ม › รหัสบุคลากร) หรือแท็บ คำสั่งซื้อ › รายชื่อที่อนุญาต</div>';
 }
 
 
@@ -1188,7 +1221,7 @@ function bindPickEditor(ED, readForm, draw, isNew) {
   var tb = $('#elTpl'); if (tb) tb.onclick = function () { eligibilityTemplate(ED); };
 }
 function eligibilityCard(ED, isNew) {
-  return '<div class="card"><div class="hd"><div><h3>' + ic('users') + ' ผู้มีสิทธิ์ + ตัวเลือกของแต่ละคน</h3><div class="small muted">นำเข้าจาก Excel: รหัสพนักงาน + ตัวเลือก 1–3 (ข้อความหรือรหัสรายการ)</div></div></div><div class="bd">' +
+  return '<div class="card"><div class="hd"><div><h3>' + ic('users') + ' ผู้มีสิทธิ์ + ตัวเลือกของแต่ละคน</h3><div class="small muted">นำเข้าจาก Excel: รหัสบุคลากร + ตัวเลือก 1–3 (ข้อความหรือรหัสรายการ)</div></div></div><div class="bd">' +
     (isNew ? '<div class="muted small">กด "บันทึก" กิจกรรมก่อน แล้วจึงนำเข้ารายชื่อผู้มีสิทธิ์</div>'
       : '<div id="elSum">' + skel(1) + '</div><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="elImp">' + ic('upload') + 'นำเข้ารายชื่อผู้มีสิทธิ์</button><button type="button" class="btn" id="elTpl">' + ic('download') + 'เทมเพลต</button></div>' +
         '<div class="small muted" style="margin-top:8px">' + ic('info') + ' ข้อความที่สะกดต่างกันเล็กน้อย (ช่องว่าง จุด # ฎ/ฏ) ระบบจับคู่ให้ · ข้อความที่ไม่ตรงรายการใดเลยจะแสดงให้ตรวจหลังนำเข้า</div>') + '</div></div>';
@@ -1207,7 +1240,7 @@ function eligibilityTemplate(ED) {
     { name: 'ผู้มีสิทธิ์', rows: [['EmpCode', 'ชื่อ-สกุล', 'ตัวเลือก1', 'ตัวเลือก2', 'ตัวเลือก3', 'ฝ่ายที่ปฏิบัติงาน', 'หน่วยที่ปฏิบัติงาน'],
       ['5XXXXXX', 'นางสาว ตัวอย่าง ข้อมูลสมมติ', (ED.config.items[0] || {}).label || 'P01', (ED.config.items[1] || {}).key || '', '', 'ฝ่ายการพยาบาล', 'OPD 4']] },
     { name: 'รายการ', rows: [['รหัส', 'ชื่อรายการ', 'ประเภท']].concat(ED.config.items.map(function (it) { return [it.key, it.label, it.kind]; })) },
-    { name: 'คำอธิบาย', rows: [['คอลัมน์', 'ความหมาย'], ['EmpCode', 'รหัสพนักงาน (จำเป็น)'], ['ตัวเลือก1–3', 'ชื่อรายการ (ตรงกับแผ่น "รายการ") หรือรหัส เช่น P29 · มีกี่ช่องก็ได้'],
+    { name: 'คำอธิบาย', rows: [['คอลัมน์', 'ความหมาย'], ['EmpCode', 'รหัสบุคลากร (จำเป็น)'], ['ตัวเลือก1–3', 'ชื่อรายการ (ตรงกับแผ่น "รายการ") หรือรหัส เช่น P29 · มีกี่ช่องก็ได้'],
       ['ฝ่าย/หน่วยที่ปฏิบัติงาน', 'ไม่บังคับ · ใช้ให้หัวหน้าฝ่ายที่คนนั้นปฏิบัติงานจริงเป็นผู้ติดตาม (ผู้ดูแลสูงสุดเลือกอัปเดตได้ตอนนำเข้า)'], ['ชื่อ-สกุล', 'ไว้อ่านตรวจเท่านั้น ระบบไม่ใช้']] }
   ]).catch(errToast);
 }
@@ -1218,11 +1251,11 @@ function importEligibilityFlow(ED) {
     return readSheetFile(file).then(function (raw) {
       var optCols = raw.length ? Object.keys(raw[0]).filter(function (k) { return /^(ตัวเลือก|เลือก|option|opt)\s*_?\d+$/i.test(k.trim()) || /^รหัสรายการ/.test(k.trim()); }) : [];
       var rows = raw.map(function (r) {
-        return { empCode: pickCol(r, ['EmpCode', 'รหัสพนักงาน', 'รหัสประจำตัว', 'รหัส', 'empCode']).replace(/\D/g, ''), name: pickCol(r, ['ชื่อ-สกุล', 'ชื่อสกุล', 'FullName']),
+        return { empCode: pickCol(r, ['EmpCode', 'รหัสบุคลากร', 'รหัสพนักงาน', 'รหัสประจำตัว', 'รหัส', 'empCode']).replace(/\D/g, ''), name: pickCol(r, ['ชื่อ-สกุล', 'ชื่อสกุล', 'FullName']),
           options: optCols.map(function (k) { return String(r[k] || '').trim(); }).filter(Boolean),
           workDivision: pickCol(r, ['ฝ่ายที่ปฏิบัติงาน', 'WorkDivision']), workUnit: pickCol(r, ['หน่วยที่ปฏิบัติงาน', 'WorkUnit']) };
       }).filter(function (r) { return r.empCode; });
-      if (!rows.length) return toast('ไม่พบคอลัมน์ EmpCode / รหัสพนักงาน ในไฟล์', 'warn');
+      if (!rows.length) return toast('ไม่พบคอลัมน์ EmpCode / รหัสบุคลากร ในไฟล์', 'warn');
       if (!optCols.length) return toast('ไม่พบคอลัมน์ ตัวเลือก1, ตัวเลือก2 … ในไฟล์ (ดูเทมเพลต)', 'warn');
       var hasWork = rows.some(function (r) { return r.workDivision || r.workUnit; }), noOpt = rows.filter(function (r) { return !r.options.length; }).length;
       var body = '<div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">' + [['แถวที่อ่านได้', rows.length], ['คอลัมน์ตัวเลือก', optCols.length], ['ไม่มีตัวเลือก', noOpt]].map(function (k) { return '<div class="kpi"><small>' + k[0] + '</small><b class="num" style="font-size:24px">' + nf(k[1]) + '</b></div>'; }).join('') + '</div>' +

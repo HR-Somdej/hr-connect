@@ -759,3 +759,14 @@ button.chip { font-family: inherit; cursor: pointer; }
 .grid2 input[type=datetime-local], .grid3 input[type=datetime-local] { min-width: 0; max-width: 100%; }
 .th-awbar .btn { white-space: normal; text-align: left; height: auto; }
 .th-cattabs { max-width: 100%; }
+
+/* 13 พ.ย. 69: โหมดทดสอบก่อนใช้งานจริง */
+.announce.tl-on { background: linear-gradient(90deg, #fff1e6, #fff); border-color: #f5c08a; color: #8a3b00; }
+.tl-steps { margin: 0; padding-left: 20px; line-height: 1.9; }
+.tl-evs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 6px; }
+.tl-ev { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; background: #fff; line-height: 1.5; }
+.tl-ev.on { border-color: #f5c08a; background: #fff8f1; }
+.tl-ev input { margin-top: 4px; flex: none; }
+.tl-ev .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; }
+.tl-testers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tl-reset { border-color: #f1c6c8; }

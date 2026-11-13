@@ -22,7 +22,7 @@ function pwRules(pw, pw2, emp) {
   return [
     { ok: pw.length >= 8, t: 'อย่างน้อย 8 ตัวอักษร' },
     { ok: /\d/.test(pw) && /[^\d\s]/.test(pw), t: 'มีทั้งตัวอักษรและตัวเลข' },
-    { ok: !emp || pw.indexOf(emp) < 0, t: 'ไม่มีรหัสพนักงานอยู่ในรหัสผ่าน' },
+    { ok: !emp || pw.indexOf(emp) < 0, t: 'ไม่มีรหัสบุคลากรอยู่ในรหัสผ่าน' },
     { ok: !!pw && pw === pw2, t: 'พิมพ์ยืนยันตรงกัน' }
   ];
 }
@@ -93,9 +93,9 @@ function drawLoginForm() {
   if (LG.brand && LG.brand.lineUrl) { HELPC.lineUrl = LG.brand.lineUrl; }
   var m = LG.mode, box = $('#lgBox');
   box.innerHTML = '<form id="loginForm" autocomplete="on" novalidate>' +
-    (/^#\/checkin\//.test(location.hash) ? '<div class="announce" style="margin-bottom:12px">' + ic('qr') + '<div><b>เช็กอิน Hospital Town Hall</b><br>เข้าสู่ระบบแล้วระบบจะเช็กอินให้อัตโนมัติ · หากแจ้งว่า QR หมดอายุ ให้สแกนจากจออีกครั้ง</div></div>' : '') + '<h2>เข้าสู่ระบบ</h2><p class="sub">' + (m === 'pw' ? 'ใช้รหัสพนักงาน และรหัสผ่านที่ท่านตั้งไว้' : 'ยังไม่เคยตั้งรหัสผ่าน ใช้รหัสพนักงานและเลขบัตรประชาชน 13 หลัก') + '</p>' +
+    (/^#\/checkin\//.test(location.hash) ? '<div class="announce" style="margin-bottom:12px">' + ic('qr') + '<div><b>เช็กอิน Hospital Town Hall</b><br>เข้าสู่ระบบแล้วระบบจะเช็กอินให้อัตโนมัติ · หากแจ้งว่า QR หมดอายุ ให้สแกนจากจออีกครั้ง</div></div>' : '') + '<h2>เข้าสู่ระบบ</h2><p class="sub">' + (m === 'pw' ? 'ใช้รหัสบุคลากร และรหัสผ่านที่ท่านตั้งไว้' : 'ยังไม่เคยตั้งรหัสผ่าน ใช้รหัสบุคลากรและเลขบัตรประชาชน 13 หลัก') + '</p>' +
     '<div class="seg lgtabs" role="tablist"><button type="button" role="tab" class="' + (m === 'pw' ? 'on' : '') + '" data-lm="pw">' + ic('key') + 'รหัสผ่าน</button><button type="button" role="tab" class="' + (m === 'cid' ? 'on' : '') + '" data-lm="cid">' + ic('user') + 'เข้าครั้งแรก (เลขบัตร)</button></div>' +
-    '<div class="field"><label class="f" for="lgEmp">รหัสพนักงาน</label><input class="input" id="lgEmp" name="username" inputmode="numeric" autocomplete="username" placeholder="เลขประจำตัวบุคลากร 7 หลัก เช่น 5XXXXXX" required></div>' +
+    '<div class="field"><label class="f" for="lgEmp">รหัสบุคลากร</label><input class="input" id="lgEmp" name="username" inputmode="numeric" autocomplete="username" placeholder="เลขประจำตัวบุคลากร 7 หลัก เช่น 5XXXXXX" required></div>' +
     (m === 'pw'
       ? '<div class="field"><label class="f" for="lgPw">รหัสผ่าน</label><div class="pin"><input class="input" id="lgPw" name="password" type="password" autocomplete="current-password" maxlength="64" required>' +
         '<button type="button" class="iconbtn eye" id="lgEye" aria-label="แสดงรหัสผ่าน">' + ic('eye') + '</button></div></div>'
@@ -127,7 +127,7 @@ function drawLoginForm() {
     ev.preventDefault();
     var e = emp.value.trim(), v = m === 'pw' ? sec.value : sec.value.replace(/\D/g, '');
     $('#lgErr').classList.add('hide');
-    var bad = !e ? 'กรุณากรอกรหัสพนักงาน' : (m === 'pw' ? (!v ? 'กรุณากรอกรหัสผ่าน' : '') : (v.length !== 13 ? 'กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก' : ''));
+    var bad = !e ? 'กรุณากรอกรหัสบุคลากร' : (m === 'pw' ? (!v ? 'กรุณากรอกรหัสผ่าน' : '') : (v.length !== 13 ? 'กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก' : ''));
     if (bad) { lgErr(bad); (e ? sec : emp).focus(); return; }
     busy($('#lgBtn'), rawCall('login', m === 'pw' ? { empCode: e, password: v } : { empCode: e, cid: v })).then(function (r) {
       if (!r.ok) throw new Error(r.error);
@@ -161,7 +161,7 @@ var SETUP_TH = {
 function drawSetPassword(setup, reason, emp, cid) {
   var t = SETUP_TH[reason] || SETUP_TH.FORGOT, box = $('#lgBox');
   box.innerHTML = '<form id="spForm" novalidate><div class="bigicon acc" style="margin:0 0 12px">' + ic('shield') + '</div><h2>' + esc(t[0]) + '</h2><p class="sub">' + esc(t[1]) + '</p>' +
-    '<div class="field"><label class="f">รหัสพนักงาน</label><input class="input" value="' + esc(emp) + '" readonly autocomplete="username"></div>' + pwFields('sp', emp) +
+    '<div class="field"><label class="f">รหัสบุคลากร</label><input class="input" value="' + esc(emp) + '" readonly autocomplete="username"></div>' + pwFields('sp', emp) +
     '<div id="lgErr" class="hide lgerr"></div><button class="btn primary lg block" id="spBtn" data-busy="กำลังบันทึก…" disabled>' + ic('check') + 'บันทึกรหัสผ่านและเข้าสู่ระบบ</button>' +
     '<div class="note">' + ic('info') + '<div>เคล็ดลับ: ใช้คำหรือวลีที่จำง่ายผสมตัวเลข เช่น ชื่อสัตว์เลี้ยง + ปีที่ชอบ · <b>ห้ามใช้เลขบัตรประชาชนหรือวันเกิด</b> · จดไว้ในที่ปลอดภัย</div></div>' +
     '<div class="row" style="justify-content:center;margin-top:10px"><button type="button" class="linkbtn" id="spBack">' + ic('arrowl') + ' กลับหน้าเข้าสู่ระบบ</button></div></form>' + lgFoot();
@@ -176,7 +176,7 @@ function drawSetPassword(setup, reason, emp, cid) {
     busy($('#spBtn'), rawCall('completeSetup', { setup: setup, password: pw.value() })).then(function (r) {
       if (!r.ok) throw new Error(r.error);
       try { localStorage.setItem('hrc_loginmode', 'pw'); localStorage.setItem('hrc_lastemp', emp); } catch (x) { }
-      toast('ตั้งรหัสผ่านเรียบร้อย ครั้งต่อไปเข้าด้วยรหัสพนักงาน + รหัสผ่านนี้', 'ok', 'บันทึกแล้ว');
+      toast('ตั้งรหัสผ่านเรียบร้อย ครั้งต่อไปเข้าด้วยรหัสบุคลากร + รหัสผ่านนี้', 'ok', 'บันทึกแล้ว');
       afterLogin(r.data, emp, false);
     }).catch(function (x) { lgErr(x.message); if (/หมดเวลา|ถูกใช้ไปแล้ว/.test(x.message)) setTimeout(drawLoginForm, 2500); });
   };
@@ -184,8 +184,8 @@ function drawSetPassword(setup, reason, emp, cid) {
 /** ลืมรหัสผ่าน: ขั้น 1 รหัส+เลขบัตร → ขั้น 2 OTP → ตั้งรหัสใหม่ */
 function drawForgot(emp0) {
   var box = $('#lgBox');
-  box.innerHTML = '<form id="fgForm" novalidate><h2>ลืมรหัสผ่าน</h2><p class="sub">ยืนยันตัวตนด้วยรหัสพนักงานและเลขบัตรประชาชน ระบบจะส่ง <b>รหัสยืนยัน 6 หลัก</b> ไปที่อีเมลของท่านในระบบ HR</p>' +
-    '<div class="field"><label class="f" for="fgEmp">รหัสพนักงาน</label><input class="input" id="fgEmp" inputmode="numeric" placeholder="เลขประจำตัวบุคลากร 7 หลัก" value="' + esc(emp0 || '') + '"></div>' +
+  box.innerHTML = '<form id="fgForm" novalidate><h2>ลืมรหัสผ่าน</h2><p class="sub">ยืนยันตัวตนด้วยรหัสบุคลากรและเลขบัตรประชาชน ระบบจะส่ง <b>รหัสยืนยัน 6 หลัก</b> ไปที่อีเมลของท่านในระบบ HR</p>' +
+    '<div class="field"><label class="f" for="fgEmp">รหัสบุคลากร</label><input class="input" id="fgEmp" inputmode="numeric" placeholder="เลขประจำตัวบุคลากร 7 หลัก" value="' + esc(emp0 || '') + '"></div>' +
     '<div class="field"><label class="f" for="fgCid">เลขบัตรประชาชน 13 หลัก</label><input class="input" id="fgCid" type="password" inputmode="numeric" autocomplete="off" placeholder="ตัวเลข 13 หลัก"></div>' +
     '<div id="lgErr" class="hide lgerr"></div><button class="btn primary lg block" id="fgBtn" data-busy="กำลังตรวจสอบ…">' + ic('send') + 'ส่งรหัสยืนยันทางอีเมล</button>' +
     '<div class="row" style="justify-content:center;margin-top:10px"><button type="button" class="linkbtn" id="fgBack">' + ic('arrowl') + ' กลับหน้าเข้าสู่ระบบ</button></div></form>' + lgFoot();
@@ -196,7 +196,7 @@ function drawForgot(emp0) {
   $('#fgForm').onsubmit = function (ev) {
     ev.preventDefault();
     var e = $('#fgEmp').value.trim(), c = $('#fgCid').value.replace(/\D/g, '');
-    if (!e || c.length !== 13) return lgErr('กรุณากรอกรหัสพนักงาน และเลขบัตรประชาชนให้ครบ 13 หลัก');
+    if (!e || c.length !== 13) return lgErr('กรุณากรอกรหัสบุคลากร และเลขบัตรประชาชนให้ครบ 13 หลัก');
     busy($('#fgBtn'), rawCall('forgotStart', { empCode: e, cid: c })).then(function (r) {
       if (!r.ok) throw new Error(r.error);
       if (r.data.noEmail) return drawNoEmail(e, r.data.help);
@@ -209,7 +209,7 @@ function drawNoEmail(emp, h) {
   $('#lgBox').innerHTML = '<div class="bigicon warn" style="margin:0 0 12px">' + ic('mail') + '</div><h2>ไม่พบอีเมลของท่านในระบบ</h2>' +
     '<p class="sub">ระบบจึงส่งรหัสยืนยันให้ไม่ได้ กรุณาติดต่อฝ่ายทรัพยากรบุคคลเพื่อขอ <b>รหัสผ่านชั่วคราว</b> (ใช้ได้ 72 ชั่วโมง) แล้วเข้าระบบเพื่อตั้งรหัสใหม่</p>' +
     '<div class="stack" style="gap:10px"><a class="btn lg block" href="tel:' + esc(String(h.phone).split(/\s|-/)[0]) + '">' + ic('phone') + 'โทร ' + esc(h.phone) + '</a>' + lineBtn(h, 'แจ้งทาง LINE ' + h.lineId).replace('class="btn line"', 'class="btn line lg block"') + '</div>' +
-    '<div class="note">' + ic('info') + '<div>แจ้งรหัสพนักงาน <b class="num">' + esc(emp) + '</b> และชื่อ-สกุล · เจ้าหน้าที่จะไม่ถามเลขบัตรประชาชนหรือรหัสผ่านของท่าน · หลังเข้าระบบได้แล้ว แนะนำให้เพิ่มอีเมลในหน้าแรก เพื่อกู้รหัสผ่านเองได้ครั้งหน้า</div></div>' +
+    '<div class="note">' + ic('info') + '<div>แจ้งรหัสบุคลากร <b class="num">' + esc(emp) + '</b> และชื่อ-สกุล · เจ้าหน้าที่จะไม่ถามเลขบัตรประชาชนหรือรหัสผ่านของท่าน · หลังเข้าระบบได้แล้ว แนะนำให้เพิ่มอีเมลในหน้าแรก เพื่อกู้รหัสผ่านเองได้ครั้งหน้า</div></div>' +
     '<div class="row" style="justify-content:center;margin-top:14px"><button type="button" class="linkbtn" id="neBack">' + ic('arrowl') + ' กลับหน้าเข้าสู่ระบบ</button></div>';
   $('#neBack').onclick = function () { LG.mode = 'pw'; drawLoginForm(); };
 }
@@ -256,7 +256,7 @@ function passwordModal() {
     busy(this, api('changePassword', { current: has ? $('#cpCur').value : '', next: pw.value() })).then(function (r) {
       saveSession(r.token); S.me.hasPassword = true; S.me.pwSetAt = localIso();
       try { localStorage.setItem('hrc_loginmode', 'pw'); } catch (e) { }
-      m.close(); toast('ครั้งต่อไปเข้าด้วยรหัสพนักงาน + รหัสผ่านนี้', 'ok', has ? 'เปลี่ยนรหัสผ่านแล้ว' : 'ตั้งรหัสผ่านแล้ว');
+      m.close(); toast('ครั้งต่อไปเข้าด้วยรหัสบุคลากร + รหัสผ่านนี้', 'ok', has ? 'เปลี่ยนรหัสผ่านแล้ว' : 'ตั้งรหัสผ่านแล้ว');
       if (S.route === 'home') render();
     }).catch(function (e) { errToast(e, 'บันทึกไม่สำเร็จ'); });
   };
@@ -305,7 +305,7 @@ function myContactCard() {
     (pend.length ? '<div class="small muted" style="margin-top:10px">' + ic('info') + ' ข้อมูลที่ท่านแก้ (' + pend.map(function (k) { return { phone: 'มือถือ', extPhone: 'เบอร์ภายใน', email: 'อีเมล' }[k]; }).join(', ') + ') รอ HR อัปเดตในระบบหลักของโรงพยาบาล — ระบบนี้ใช้ค่าที่ท่านแก้แล้ว</div>' : '') +
     '</div></div>' +
     '<div class="card mycard"><div class="hd"><h3>' + ic('shield') + ' ความปลอดภัยบัญชี</h3>' + (me.hasPassword ? '<span class="chip ok">' + ic('check') + 'ตั้งรหัสผ่านแล้ว</span>' : '<span class="chip warn dot">ยังไม่ได้ตั้งรหัสผ่าน</span>') + '</div><div class="bd">' +
-    '<p class="small muted" style="margin:0 0 12px">' + (me.hasPassword ? 'ตั้งเมื่อ ' + esc(thDate(me.pwSetAt)) + ' · เข้าระบบด้วยรหัสพนักงาน + รหัสผ่าน · เลขบัตรประชาชนใช้ได้เฉพาะตอนลืมรหัสผ่าน' : 'ตอนนี้ท่านเข้าระบบด้วยเลขบัตรประชาชน · ตั้งรหัสผ่านของตนเองเพื่อความปลอดภัยและความเป็นส่วนตัว') + '</p>' +
+    '<p class="small muted" style="margin:0 0 12px">' + (me.hasPassword ? 'ตั้งเมื่อ ' + esc(thDate(me.pwSetAt)) + ' · เข้าระบบด้วยรหัสบุคลากร + รหัสผ่าน · เลขบัตรประชาชนใช้ได้เฉพาะตอนลืมรหัสผ่าน' : 'ตอนนี้ท่านเข้าระบบด้วยเลขบัตรประชาชน · ตั้งรหัสผ่านของตนเองเพื่อความปลอดภัยและความเป็นส่วนตัว') + '</p>' +
     '<button class="btn ' + (me.hasPassword ? '' : 'primary') + '" id="btnPw">' + ic('key') + (me.hasPassword ? 'เปลี่ยนรหัสผ่าน' : 'ตั้งรหัสผ่านตอนนี้') + '</button></div></div>';
 }
 
@@ -326,7 +326,7 @@ ROUTES.home = function () {
   else h += '<div class="evgrid">' + evs.map(evCard).join('') + '</div>';
   h += '<div class="mygrid">' + myContactCard() + '</div>';
   h += '<div class="card" style="margin-top:16px"><div class="hd"><h3>' + ic('user') + ' ข้อมูลของฉัน</h3><span class="muted small">จากระบบบุคลากรของโรงพยาบาล</span></div><div class="bd"><dl class="kv">' +
-    '<dt>รหัสพนักงาน</dt><dd>' + esc(me.empCode) + '</dd><dt>ชื่อ-สกุล</dt><dd>' + esc(me.name) + '</dd><dt>ตำแหน่ง</dt><dd>' + esc(me.position || '-') + '</dd>' +
+    '<dt>รหัสบุคลากร</dt><dd>' + esc(me.empCode) + '</dd><dt>ชื่อ-สกุล</dt><dd>' + esc(me.name) + '</dd><dt>ตำแหน่ง</dt><dd>' + esc(me.position || '-') + '</dd>' +
     '<dt>หน่วยงาน</dt><dd>' + esc(me.unit || '-') + '</dd><dt>ฝ่ายที่ปฏิบัติงาน</dt><dd>' + esc(me.division || '-') + '</dd>' +
     (me.hrmiDivision && me.hrmiDivision !== me.division ? '<dt>ฝ่ายต้นสังกัด (HRMi)</dt><dd>' + esc(me.hrmiDivision) + '</dd>' : '') + '<dt>กลุ่ม</dt><dd>' + esc(me.group || '-') + '</dd></dl>' +
     '<p class="small muted" style="margin:14px 0 0">' + ic('info') + ' หากชื่อ ตำแหน่ง หรือสังกัดไม่ถูกต้อง กรุณาแจ้งฝ่ายทรัพยากรบุคคล โทร ' + esc(helpContact(b.brand).phone) + '</p></div></div>';

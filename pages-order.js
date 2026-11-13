@@ -382,7 +382,7 @@ function orderHistory(id) {
 function adminOrderModal(o) {
   var ev = AO.d.event, cfg = ev.config, cart = {};
   if (o) o.items.forEach(function (i) { cart[i.optKey + '|' + i.sizeCode] = i.qty; });
-  var body = (o ? '<div class="small muted" style="margin-bottom:8px">' + esc(o.id) + ' · ' + esc(o.name) + ' · ' + payChip(o) + '</div>' : '<div class="field"><label class="f">รหัสพนักงานผู้สั่ง</label><input class="input" id="amEmp" inputmode="numeric" placeholder="เลขประจำตัวบุคลากร 7 หลัก"></div>') +
+  var body = (o ? '<div class="small muted" style="margin-bottom:8px">' + esc(o.id) + ' · ' + esc(o.name) + ' · ' + payChip(o) + '</div>' : '<div class="field"><label class="f">รหัสบุคลากรผู้สั่ง</label><input class="input" id="amEmp" inputmode="numeric" placeholder="เลขประจำตัวบุคลากร 7 หลัก"></div>') +
     (cfg.options || []).map(function (op) {
       return '<h4 style="margin:10px 0 6px">' + esc(op.label) + '</h4><div class="qgrid sm">' + op.sizes.filter(function (s) { return !s.hidden; }).map(function (s) {
         var k = op.key + '|' + s.code; return '<div class="qcell"><div class="qtop"><b>' + esc(s.code) + '</b><span class="price">' + baht(s.price) + '</span></div><input class="input" type="number" min="0" data-am="' + esc(k) + '" value="' + (cart[k] || 0) + '"></div>';
@@ -410,7 +410,7 @@ function allowListModal() {
   var ev = (AD.events || []).filter(function (e) { return e.id === AO.id; })[0] || AO.d.event, a = ev.audience || {};
   var all = a.mode !== 'FILTER';
   var m = modal({ title: 'รายชื่อที่อนุญาตให้สั่ง', size: 'lg', body: '<div class="seg" id="alMode" style="margin-bottom:12px"><button class="' + (all ? 'on' : '') + '" data-m="ALL">บุคลากรทุกคน</button><button class="' + (all ? '' : 'on') + '" data-m="FILTER">เฉพาะรหัสที่ระบุ</button></div>' +
-    '<div id="alBox"' + (all ? ' style="display:none"' : '') + '><label class="f">รหัสพนักงาน (คั่นด้วย , เว้นวรรค หรือขึ้นบรรทัดใหม่ · วางจาก Excel ได้)</label><textarea class="input" id="alCodes" style="min-height:180px">' + esc((a.codes || []).join('\n')) + '</textarea><div class="small" id="alInfo" style="margin-top:6px"></div></div>',
+    '<div id="alBox"' + (all ? ' style="display:none"' : '') + '><label class="f">รหัสบุคลากร (คั่นด้วย , เว้นวรรค หรือขึ้นบรรทัดใหม่ · วางจาก Excel ได้)</label><textarea class="input" id="alCodes" style="min-height:180px">' + esc((a.codes || []).join('\n')) + '</textarea><div class="small" id="alInfo" style="margin-top:6px"></div></div>',
     foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="alSave" data-busy="กำลังบันทึก…">บันทึก</button>' });
   var mode = all ? 'ALL' : 'FILTER';
   $$('#alMode [data-m]').forEach(function (b) { b.onclick = function () { mode = b.dataset.m; $$('#alMode button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#alBox').style.display = mode === 'FILTER' ? '' : 'none'; }; });
@@ -450,9 +450,9 @@ function exportOrders(d) {
   var ev = d.event, live = d.orders.filter(function (o) { return !o.cancelled; });
   var sz = [['แบบ', 'ไซซ์', 'ราคา', 'จำนวน (ทั้งหมด)', 'จำนวน (ชำระแล้ว)', 'เป็นเงิน (ชำระแล้ว)']];
   d.sizes.forEach(function (o) { o.sizes.forEach(function (s) { sz.push([o.label, s.code, +s.price, s.all, s.paid, s.paid * s.price]); }); });
-  var ord = [['เลขที่', 'วันที่สั่ง', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'โทร', 'รายการ', 'จำนวน', 'ค่าส่ง', 'ยอดรวม', 'สถานะชำระ', 'วิธีชำระ', 'สถานะจัดส่ง', 'ตรวจโดย', 'หมายเหตุ', 'ยกเลิก']];
+  var ord = [['เลขที่', 'วันที่สั่ง', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'โทร', 'รายการ', 'จำนวน', 'ค่าส่ง', 'ยอดรวม', 'สถานะชำระ', 'วิธีชำระ', 'สถานะจัดส่ง', 'ตรวจโดย', 'หมายเหตุ', 'ยกเลิก']];
   d.orders.forEach(function (o) { ord.push([o.id, thDate(o.createdAt), o.empCode, o.name, o.unit, o.division, o.phone, o.items.map(function (i) { return i.optLabel.replace(/^แบบ/, '') + ' ' + i.sizeCode + '×' + i.qty; }).join(', '), o.qty, o.shipping, o.total, PAY_TH[o.payStatus], { CASH: 'เงินสด', TRANSFER: 'โอน', OTHER: 'อื่น ๆ' }[o.payMethod] || '', FULFIL_TH[o.fulfil] || '', o.verifiedBy || '', o.note || '', o.cancelled ? 'ยกเลิก' : '']); });
-  var lines = [['เลขที่', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'แบบ', 'ไซซ์', 'จำนวน', 'ราคา', 'เป็นเงิน', 'สถานะชำระ']];
+  var lines = [['เลขที่', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'หน่วย', 'ฝ่าย', 'แบบ', 'ไซซ์', 'จำนวน', 'ราคา', 'เป็นเงิน', 'สถานะชำระ']];
   live.forEach(function (o) { o.items.forEach(function (i) { lines.push([o.id, o.empCode, o.name, o.unit, o.division, i.optLabel, i.sizeCode, i.qty, i.price, i.amount, PAY_TH[o.payStatus]]); }); });
   return exportXlsx('คำสั่งซื้อ_' + ev.title.replace(/[\\\/:*?"<>|]/g, '').slice(0, 30) + '_' + localIso().slice(0, 10) + '.xlsx', [{ name: 'สรุปไซซ์', rows: sz }, { name: 'คำสั่งซื้อ', rows: ord }, { name: 'รายการรายตัว', rows: lines }]);
 }
