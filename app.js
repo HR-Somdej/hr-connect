@@ -246,8 +246,12 @@ function loadXLSX() {
 /** sheets = [{name, rows (array of arrays, แถวแรก = หัว), widths?}] */
 function exportXlsx(filename, sheets) {
   return loadXLSX().then(function (X) {
-    var wb = X.utils.book_new();
+    var wb = X.utils.book_new(), used = {};
     sheets.forEach(function (sh) {
+      // 13 พ.ย. 69: ชื่อแผ่นห้ามมี : \ / ? * [ ] และยาวไม่เกิน 31 ตัวอักษร · ห้ามซ้ำ (เดิมหมวด "หัวหน้าฝ่าย / ผู้อำนวยการศูนย์" ทำให้ส่งออกไม่ได้)
+      var nm = String(sh.name || 'Sheet').replace(/[:\\\/?*\[\]]/g, '-').replace(/^'+|'+$/g, '').trim().slice(0, 31) || 'Sheet', base = nm, k = 2;
+      while (used[nm.toLowerCase()]) { var suf = ' (' + k++ + ')'; nm = base.slice(0, 31 - suf.length) + suf; }
+      used[nm.toLowerCase()] = 1; sh = Object.assign({}, sh, { name: nm });
       var ws = X.utils.aoa_to_sheet(sh.rows);
       ws['!cols'] = (sh.widths || sh.rows[0].map(function (h, i) {
         var mx = 6; sh.rows.slice(0, 200).forEach(function (r) { mx = Math.max(mx, String(r[i] == null ? '' : r[i]).length); }); return Math.min(48, mx + 2);

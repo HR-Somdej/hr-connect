@@ -151,8 +151,9 @@ function nmPicker(cat) {
   var draw = function () {
     var q = $('#npQ').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     var hit = list.filter(function (x) { var s = (x[1] + ' ' + x[2] + ' ' + x[3] + ' ' + x[4]).toLowerCase(); return q.every(function (w) { return s.indexOf(w) >= 0; }); });
-    $('#npN').textContent = q.length ? 'พบ ' + nf(hit.length) + ' คน' + (hit.length > 60 ? ' (แสดง 60 คนแรก พิมพ์เพิ่มเพื่อค้นให้แคบลง)' : '') : 'ในหมวดนี้มี ' + nf(list.length) + ' คน · พิมพ์เพื่อค้นหา';
-    $('#npL').innerHTML = (q.length ? hit : hit.slice(0, 30)).slice(0, 60).map(function (x) {
+    // 13 พ.ย. 69: แสดงครบทุกคนในหมวด (เดิมตัดที่ 30/60 คน ทำให้เลื่อนหาไม่ครบ)
+    $('#npN').textContent = q.length ? 'พบ ' + nf(hit.length) + ' คน' : 'ในหมวดนี้มี ' + nf(list.length) + ' คน · เลื่อนดูได้ทั้งหมด หรือพิมพ์เพื่อค้นหา';
+    $('#npL').innerHTML = hit.map(function (x) {
       return '<button type="button" class="th-pitem" data-pk="' + esc(x[0]) + '"><span class="avatar">' + esc(initials(x[1])) + '</span><span style="flex:1;min-width:0;text-align:left"><b>' + esc(x[1]) + (x[0] === S.me.empCode ? ' <span class="chip info">ตัวท่านเอง</span>' : '') + '</b><small>' + esc([x[2], x[3], x[4]].filter(Boolean).join(' · ')) + '</small></span>' + ic('plus') + '</button>';
     }).join('') || '<div class="empty">' + ic('search') + '<p>ไม่พบรายชื่อ</p></div>';
     $$('[data-pk]', m.el).forEach(function (b) { b.onclick = function () { (EVS.nm[cat] = EVS.nm[cat] || []).push({ code: b.dataset.pk, reasons: [], text: '' }); thDraftSet(EVS.ev.id, EVS.nm); m.close(); nmDrawForm(); toast('เพิ่ม ' + NM.by[b.dataset.pk][1] + ' แล้ว', 'ok'); }; });
