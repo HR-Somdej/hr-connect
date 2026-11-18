@@ -81,6 +81,7 @@ function drawDash(d) {
   var divs = d.byDivision.slice().sort(function (a, b) { return a.pct - b.pct; });
   var tl = d.timeline.slice(-21), maxT = 1; tl.forEach(function (t) { maxT = Math.max(maxT, t.n); });
 
+  var szCard = '';
   if (isPick) {
     var its = (d.items || []).filter(function (x) { return x.eligible || x.chosen; }).sort(function (a, b) { return b.chosen - a.chosen || b.eligible - a.eligible; }), maxI = 1;
     its.forEach(function (x) { maxI = Math.max(maxI, x.eligible); });
@@ -88,9 +89,12 @@ function drawDash(d) {
       return '<div class="pbar"><div class="row between" style="gap:8px;flex-wrap:nowrap"><span class="lbl2">' + esc(x.label) + '</span><span class="small num" style="white-space:nowrap"><b>' + nf(x.chosen) + '</b> / ' + nf(x.eligible) + '</span></div>' +
         '<div class="track"><div class="fill" style="width:' + (x.chosen / maxI * 100) + '%"></div><div class="fill ghost" style="width:' + (x.eligible / maxI * 100) + '%"></div></div></div>';
     }).join('') : '<div class="muted small">ยังไม่มีรายชื่อผู้มีสิทธิ์ — นำเข้าที่แท็บ "ตั้งค่ากิจกรรม"</div>';
+    var szIts = (d.items || []).filter(function (x) { return x.sizes && x.chosen; });
+    var szCard = szIts.length ? '<div class="card"><div class="hd"><div><h3>' + ic('table') + ' สรุปไซซ์</h3><div class="small muted">เฉพาะรายการที่มีตารางไซซ์ · ตัวเลข = จำนวนตัว (คน)</div></div>' + (k.sizeMissing ? '<a class="chip warn dot" href="#/admin/tracking/' + esc(ev.id) + '?status=nosize">รอระบุไซซ์ ' + nf(k.sizeMissing) + ' คน ' + ic('arrowr') + '</a>' : '') + '</div><div class="bd">' +
+      szIts.map(function (x) { return '<div class="pkszsum"><div class="row between"><b>' + esc(x.label) + '</b><span class="small num">เลือก ' + nf(x.chosen) + (x.sizes.missing ? ' · <span style="color:var(--warn)">รอระบุ ' + nf(x.sizes.missing) + '</span>' : '') + '</span></div>' + pkSizeSumHtml(ev.config, x) + '</div>'; }).join('') + '</div></div>' : '';
   }
   h += '<div class="dgrid"><div class="stack">' +
-    (isPick ? '<div class="card"><div class="hd"><div><h3>' + ic('shirt') + ' จำนวนผู้เลือกต่อรายการ</h3><div class="small muted">ตัวเลข = เลือกแล้ว / มีสิทธิ์เลือก · แถบจาง = จำนวนผู้มีสิทธิ์</div></div><span class="chip acc num">เลือกแล้ว ' + nf(k.ordered) + ' คน</span></div><div class="bd">' + bars + '</div></div>'
+    (isPick ? '<div class="card"><div class="hd"><div><h3>' + ic('shirt') + ' จำนวนผู้เลือกต่อรายการ</h3><div class="small muted">ตัวเลข = เลือกแล้ว / มีสิทธิ์เลือก · แถบจาง = จำนวนผู้มีสิทธิ์</div></div><span class="chip acc num">เลือกแล้ว ' + nf(k.ordered) + ' คน</span></div><div class="bd">' + bars + '</div></div>' + szCard
       : '<div class="card"><div class="hd"><h3>' + ic('shirt') + ' จำนวนตามไซซ์</h3><span class="chip acc num">รวม ' + nf(k.pieces) + ' ตัว</span></div><div class="bd bars">' + bars + '</div></div>') +
     (ev.type === 'CHOICE' ? '<div class="card"><div class="hd"><div><h3>' + ic('send') + ' สรุปส่งจัดซื้อ (เรียงตามแบบฟอร์ม)</h3><div class="small muted">คลิกตัวเลขเพื่อคัดลอกไปวางในช่องของ MS Forms ทีละช่อง</div></div>' +
       '<div class="row"><button class="btn sm" id="cpAll">' + ic('copy') + 'คัดลอกทั้งชุด</button></div></div><div class="bd">' +
@@ -168,6 +172,18 @@ function exportPickWorkbook(x) {
   sum.push([], ['', '', 'รวมผู้เลือก', '', d.kpi.ordered, ''], ['', '', 'ไม่ประสงค์รับ (ตอบเอง)', '', d.kpi.declinedSelf, ''], ['', '', 'ไม่ประสงค์รับ (HR บันทึก)', '', d.kpi.declinedAdmin, ''],
     ['', '', 'ยังไม่ตอบ (ถือว่าไม่ประสงค์รับ)', '', d.kpi.pending, ''], ['', '', 'ผู้มีรายชื่อทั้งหมด', '', d.kpi.target, ''], [], ['', '', 'ข้อมูล ณ', thDate(d.generatedAt)]);
   var used = items.filter(function (it) { return it.eligible || it.chosen; });
+  // 18 พ.ย. 69: สรุปไซซ์ (ส่งจัดหา) — 1 แถว/รายการ/ส่วน/แบบ/ไซซ์ · ขนาดพิเศษแสดงรายคน
+  var szRows = [['รหัสรายการ', 'รายการ', 'ส่วน', 'แบบ', 'ไซซ์', 'จำนวน', 'รายละเอียดขนาด']], cfgx = ev.config || {};
+  items.forEach(function (it) {
+    if (!it.sizes) return;
+    (it.sizes.charts || []).forEach(function (st) {
+      var ch = (cfgx.sizeCharts || []).filter(function (c) { return c.id === st.id; })[0]; if (!ch) return;
+      ch.variants.forEach(function (v) { v.sizes.forEach(function (s) { var n = st.counts[(ch.variants.length > 1 ? v.key : '') + '|' + s.code] || 0; if (n || !s.hidden) szRows.push([it.key, it.label, ch.part || ch.name, ch.variants.length > 1 ? v.label || v.key : '', s.code, n, pkDetail(ch, s)]); }); });
+      if (st.custom.length) szRows.push([it.key, it.label, ch.part || ch.name, '', 'ขนาดพิเศษ', st.custom.length, st.custom.join(' | ')]);
+    });
+    if (it.sizes.missing) szRows.push([it.key, it.label, '', '', 'รอระบุไซซ์', it.sizes.missing, 'ดูรายชื่อที่แผ่น "รอระบุไซซ์"']);
+    szRows.push([]);
+  });
   var piv = function (name, keyFn) {
     var m = {};
     rows.forEach(function (r) { var k = keyFn(r) || '(ไม่ระบุ)', g = m[k] || (m[k] = { t: 0, o: 0, dc: 0, p: 0, s: {} }); if (r.target) g.t++; if (r.status === 'ORDERED') { g.o++; g.s[r.optKey] = (g.s[r.optKey] || 0) + 1; } else if (r.status === 'DECLINED') g.dc++; else if (r.target) g.p++; });
@@ -175,16 +191,16 @@ function exportPickWorkbook(x) {
     Object.keys(m).sort().forEach(function (k) { var g = m[k]; out.push([k, g.t, g.o, g.dc, g.p, g.t ? Math.round((g.o + g.dc) * 1000 / g.t) / 10 : '-'].concat(used.map(function (it) { return g.s[it.key] || 0; }))); });
     return out;
   };
-  var head = ['ลำดับ', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วยที่ปฏิบัติงาน', 'ฝ่ายที่ปฏิบัติงาน', 'ฝ่ายต้นสังกัด (HRMi)', 'กลุ่ม', 'สถานะ', 'รายการที่เลือก', 'ตัวเลือกที่มีสิทธิ์', 'บันทึกล่าสุด', 'หมายเหตุ'].concat(contact ? ['มือถือ', 'เบอร์ภายใน', 'อีเมล'] : []);
-  var list = function (f) { var out = [head], n = 0; rows.filter(f).forEach(function (r) { out.push([++n, r.empCode, r.name, r.position, r.unit, r.division, r.hrmiDivision, r.group, stx(r), r.status === 'ORDERED' && IT[r.optKey] ? IT[r.optKey].label : '', String(r.opts || '').split(',').filter(Boolean).map(function (k) { return IT[k] ? IT[k].label : k; }).join(' | '), r.updatedAt ? thDate(r.updatedAt) : '', r.note].concat(contact ? [r.phone, r.extPhone, r.email] : [])); }); return out; };
+  var head = ['ลำดับ', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'หน่วยที่ปฏิบัติงาน', 'ฝ่ายที่ปฏิบัติงาน', 'ฝ่ายต้นสังกัด (HRMi)', 'กลุ่ม', 'สถานะ', 'รายการที่เลือก', 'ไซซ์', 'ตัวเลือกที่มีสิทธิ์', 'บันทึกล่าสุด', 'หมายเหตุ'].concat(contact ? ['มือถือ', 'เบอร์ภายใน', 'อีเมล'] : []);
+  var list = function (f) { var out = [head], n = 0; rows.filter(f).forEach(function (r) { out.push([++n, r.empCode, r.name, r.position, r.unit, r.division, r.hrmiDivision, r.group, stx(r), r.status === 'ORDERED' && IT[r.optKey] ? IT[r.optKey].label : '', r.status === 'ORDERED' ? (r.sizeMissing ? 'รอระบุไซซ์' + (r.sizeCode ? ' (' + r.sizeCode + ')' : '') : r.sizeCode || '') : '', String(r.opts || '').split(',').filter(Boolean).map(function (k) { return IT[k] ? IT[k].label : k; }).join(' | '), r.updatedAt ? thDate(r.updatedAt) : '', r.note].concat(contact ? [r.phone, r.extPhone, r.email] : [])); }); return out; };
   return exportXlsx('สรุป_' + ev.title.replace(/[\\\/:*?"<>|]/g, '').slice(0, 40) + '_' + localIso().slice(0, 10) + '.xlsx', [
-    { name: 'สรุปยอดต่อรายการ', rows: sum, widths: [7, 10, 60, 10, 16, 18] },
+    { name: 'สรุปยอดต่อรายการ', rows: sum, widths: [7, 10, 60, 10, 16, 18] }].concat(szRows.length > 1 ? [{ name: 'สรุปไซซ์', rows: szRows, widths: [10, 46, 12, 22, 14, 12, 40] }] : []).concat([
     { name: 'สรุปรายฝ่าย', rows: piv('ฝ่ายที่ปฏิบัติงาน', function (r) { return r.division; }) },
     { name: 'สรุปรายหน่วย', rows: piv('หน่วย (ฝ่าย)', function (r) { return (r.unit || '-') + ' (' + r.division + ')'; }) },
     { name: 'รายชื่อทั้งหมด', rows: list(function () { return true; }) },
     { name: 'เลือกแล้ว', rows: list(function (r) { return r.status === 'ORDERED'; }) },
     { name: 'ไม่ประสงค์รับ', rows: list(function (r) { return r.status === 'DECLINED'; }) },
-    { name: 'ยังไม่ตอบ', rows: list(function (r) { return r.target && !r.status; }) }]);
+    { name: 'ยังไม่ตอบ', rows: list(function (r) { return r.target && !r.status; }) }]).concat(rows.some(function (r) { return r.sizeMissing; }) ? [{ name: 'รอระบุไซซ์', rows: list(function (r) { return r.sizeMissing; }) }] : []));
 }
 
 /* =================================================================== ติดตามรายบุคคล */
@@ -204,6 +220,7 @@ function trFiltered() {
     if (f.status === 'ordered' && r.status !== 'ORDERED') return false;
     if (f.status === 'declined' && r.status !== 'DECLINED') return false;
     if (f.status === 'done' && !r.status) return false;
+    if (f.status === 'nosize' && !r.sizeMissing) return false;
     if (f.div && r.division !== f.div) return false;
     if (f.unit && r.unit !== f.unit) return false;
     if (f.pos && r.position !== f.pos) return false;
@@ -218,7 +235,7 @@ function drawTracking() {
   var d = TR.data, f = TR.f, all = TR.rows, admin = d.canSeeContact;
   var cnt = { all: all.length, pending: 0, ordered: 0, declined: 0 };
   var base = all.filter(function (r) { return (!f.div || r.division === f.div) && (!f.unit || r.unit === f.unit) && (!f.pos || r.position === f.pos) && (!f.group || r.group === f.group); });
-  cnt.all = base.length; base.forEach(function (r) { if (r.status === 'ORDERED') cnt.ordered++; else if (r.status === 'DECLINED') cnt.declined++; else if (r.target) cnt.pending++; });
+  cnt.all = base.length; cnt.nosize = 0; base.forEach(function (r) { if (r.status === 'ORDERED') cnt.ordered++; else if (r.status === 'DECLINED') cnt.declined++; else if (r.target) cnt.pending++; if (r.sizeMissing) cnt.nosize++; });
   var h = pageHead('ติดตามรายบุคคล', esc(d.event.title) + ' · ข้อมูล ณ ' + esc(thShort(d.generatedAt)),
     eventPicker(TR.id, 'tracking') + '<button class="btn" id="tRefresh">' + ic('refresh') + 'รีเฟรช</button>', 'ติดตาม');
   h += scopeNote(TR.id);
@@ -228,7 +245,7 @@ function drawTracking() {
     sel('fPos', 'ทุกตำแหน่ง', uniq(all, 'position', function (r) { return (!f.div || r.division === f.div) && (!f.unit || r.unit === f.unit); }), f.pos) + sel('fGroup', 'ทุกกลุ่ม', uniq(all, 'group'), f.group) +
     (f.div || f.unit || f.pos || f.group || f.q ? '<button class="btn sm ghost" id="fClear">' + ic('x') + 'ล้างตัวกรอง</button>' : '') + '</div>' +
     '<div class="row between" style="margin-top:12px"><div class="seg" id="fStatus">' +
-    [['all', 'ทั้งหมด', cnt.all], ['pending', 'ยังไม่ตอบ', cnt.pending], ['ordered', stTh(TR.ev, 'ORDERED'), cnt.ordered], ['declined', 'ไม่ประสงค์', cnt.declined]].map(function (s) { return '<button class="' + (f.status === s[0] ? 'on' : '') + '" data-st="' + s[0] + '">' + s[1] + '<span class="c num">' + nf(s[2]) + '</span></button>'; }).join('') +
+    [['all', 'ทั้งหมด', cnt.all], ['pending', 'ยังไม่ตอบ', cnt.pending], ['ordered', stTh(TR.ev, 'ORDERED'), cnt.ordered], ['declined', 'ไม่ประสงค์', cnt.declined]].concat(d.event.type === 'PICK' && (cnt.nosize || f.status === 'nosize') ? [['nosize', 'รอระบุไซซ์', cnt.nosize]] : []).map(function (s) { return '<button class="' + (f.status === s[0] ? 'on' : '') + '" data-st="' + s[0] + '">' + s[1] + '<span class="c num">' + nf(s[2]) + '</span></button>'; }).join('') +
     '</div><div class="row">' + (admin ? piiBtn() : '') + '<button class="btn sm" id="tExport">' + ic('download') + 'ส่งออกที่กรอง</button>' +
     (admin ? '<button class="btn sm" id="tPhones">' + ic('phone') + 'คัดลอกเบอร์ผู้ยังไม่ตอบ</button><button class="btn sm primary" id="tRemind">' + ic('mail') + 'อีเมลเตือนผู้ยังไม่ตอบ</button>' : '') + '</div></div></div>' +
     (admin && !isTh(d.event) && (d.event.config || {}).allowDecline !== false ? '<div class="bulkbar" id="tBulk"></div>' : '') +
@@ -264,7 +281,7 @@ function sizeTxt(r) {
   if (TR.ev.type === 'CHECKIN') return r.status === 'ORDERED' ? '<span class="small">' + (r.note === 'DESK' ? 'โต๊ะลงทะเบียน' : 'สแกน QR') + '</span>' : '<span class="muted">–</span>';
   if (TR.ev.type === 'PICK') {
     var IT = pickItems(TR.ev), opts = String(r.opts || '').split(',').filter(Boolean);
-    if (r.status === 'ORDERED') return '<b class="small">' + esc(IT[r.optKey] ? IT[r.optKey].label : r.optKey) + '</b>';
+    if (r.status === 'ORDERED') return '<b class="small">' + esc(IT[r.optKey] ? IT[r.optKey].label : r.optKey) + '</b>' + (r.sizeCode ? '<div class="sub">' + ic('shirt') + ' ' + esc(r.sizeCode) + '</div>' : '') + (r.sizeMissing ? '<div><span class="chip warn dot">รอระบุไซซ์</span></div>' : '');
     return opts.length ? '<span class="small muted">มีสิทธิ์: ' + esc(opts.map(function (k) { return IT[k] ? IT[k].label : k; }).join(' / ')) + '</span>' : '<span class="small muted">ไม่มีตัวเลือก</span>';
   }
   if (r.status !== 'ORDERED') return '<span class="muted">–</span>'; var o = (TR.ev.config.options || []).filter(function (x) { return x.key === r.optKey; })[0]; return '<b>' + esc(r.sizeCode) + '</b> <span class="small muted">' + esc(o ? o.label.replace(/^แบบ/, '') : r.optKey) + (r.extraQty ? ' +' + r.extraQty : '') + '</span>'; }
@@ -285,7 +302,7 @@ function drawTrackTable() {
     }).join('') : '<tr><td colspan="7"><div class="empty">' + ic('search') + '<p>ไม่พบรายชื่อตามเงื่อนไข</p></div></td></tr>') + '</tbody></table>' +
     '<div class="mlist">' + slice.map(function (r) {
       return '<div class="mi"><div class="avatar" style="width:36px;height:36px;font-size:14px">' + esc(initials(r.name)) + '</div><div class="x"><b>' + esc(r.name) + '</b><small>' + esc(r.empCode + ' · ' + r.position) + '</small><small>' + esc(r.unit || r.division) + '</small>' +
-        '<div class="row" style="margin-top:5px">' + (canBulk && selectable(r) ? '<label class="chip"><input type="checkbox" data-sel="' + esc(r.empCode) + '" ' + (TR.sel[r.empCode] ? 'checked' : '') + '> เลือก</label>' : '') + statusChip(r) + (r.status === 'ORDERED' ? '<span class="chip acc" style="white-space:normal">' + (TR.ev.type === 'PICK' ? esc((pickItems(TR.ev)[r.optKey] || {}).label || r.optKey) : esc(r.optKey + ' · ' + r.sizeCode)) + '</span>' : '') + '</div></div>' +
+        '<div class="row" style="margin-top:5px">' + (canBulk && selectable(r) ? '<label class="chip"><input type="checkbox" data-sel="' + esc(r.empCode) + '" ' + (TR.sel[r.empCode] ? 'checked' : '') + '> เลือก</label>' : '') + statusChip(r) + (r.status === 'ORDERED' ? '<span class="chip acc" style="white-space:normal">' + (TR.ev.type === 'PICK' ? esc((pickItems(TR.ev)[r.optKey] || {}).label || r.optKey) + (r.sizeCode ? ' · ' + esc(r.sizeCode) : '') : esc(r.optKey + ' · ' + r.sizeCode)) + '</span>' + (r.sizeMissing ? '<span class="chip warn dot">รอระบุไซซ์</span>' : '') : '') + '</div></div>' +
         (admin ? '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' + (r.phone ? '<a class="btn sm" href="tel:' + esc(r.phone) + '">' + ic('phone') + '</a>' : '') + (isTh(TR.ev) ? '' : '<button class="btn sm" data-proxy="' + esc(r.empCode) + '">' + ic('edit') + '</button>') + '</div>' : '') + '</div>';
     }).join('') + '</div></div>' +
     '<div class="pager"><span>แสดง ' + (list.length ? ((TR.page - 1) * TR.size + 1) + '–' + Math.min(list.length, TR.page * TR.size) : 0) + ' จาก ' + nf(list.length) + ' คน</span><div class="row">' +
@@ -376,25 +393,38 @@ function proxyPickModal(r) {
   var ev = TR.ev, cfg = ev.config || {}, IT = pickItems(ev), mineK = String(r.opts || '').split(',').filter(Boolean), lbl = cfg.declineLabel || 'ไม่ประสงค์รับ';
   var others = (cfg.items || []).filter(function (it) { return mineK.indexOf(it.key) < 0; });
   var cur = r.status === 'DECLINED' ? 'X' : r.status === 'ORDERED' ? r.optKey : (mineK.length === 1 ? mineK[0] : '');
-  var body = '<div class="row" style="margin-bottom:12px"><div class="avatar">' + esc(initials(r.name)) + '</div><div><b>' + esc(r.name) + '</b><div class="small muted">' + esc(r.empCode + ' · ' + r.position + ' · ' + (r.unit || r.division)) + '</div></div></div>' +
+  var sz = {}, szFor = null;
+  var body = '<div class="row" style="margin-bottom:12px"><div class="avatar">' + esc(initials(r.name)) + '</div><div style="flex:1"><b>' + esc(r.name) + '</b><div class="small muted">' + esc(r.empCode + ' · ' + r.position + ' · ' + (r.unit || r.division)) + '</div></div><button type="button" class="btn sm ghost" id="pxElig">' + ic('users') + 'แก้สิทธิ์</button></div>' +
     '<div class="field"><label class="f">เลือกแทน</label><select class="input" id="pxPick"><option value="">— เลือก —</option><optgroup label="รายการที่มีสิทธิ์">' + mineK.map(function (k) { return '<option value="' + esc(k) + '" ' + (cur === k ? 'selected' : '') + '>' + esc(IT[k] ? IT[k].label : k) + '</option>'; }).join('') + '</optgroup>' +
     (cfg.allowDecline !== false ? '<option value="X" ' + (cur === 'X' ? 'selected' : '') + '>' + esc(lbl) + '</option>' : '') +
     '<optgroup label="รายการอื่น (นอกสิทธิ์ — ใช้เมื่อจำเป็น)">' + others.map(function (it) { return '<option value="' + esc(it.key) + '" ' + (cur === it.key ? 'selected' : '') + '>' + esc(it.label) + '</option>'; }).join('') + '</optgroup></select></div>' +
+    '<div id="pxSz"></div>' +
     '<div class="field"><label class="f">หมายเหตุ / เหตุผลที่บันทึกแทน</label><input class="input" id="pxNote" maxlength="300" value="' + esc(r.note || '') + '" placeholder="เช่น โทรสอบถามแล้ว"></div>' +
-    '<div class="small muted">' + ic('info') + ' บันทึกแทนได้แม้ปิดรับแล้ว · ระบบบันทึกประวัติว่าใครแก้อะไร</div>';
-  var m = modal({ title: (r.status ? 'แก้ไขแทน' : 'บันทึกแทน'), body: body, foot: (r.status ? '<button class="btn danger" id="pxReset" style="margin-right:auto">' + ic('trash') + 'ล้างคำตอบ</button>' : '') + '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="pxSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
+    '<div class="small muted">' + ic('info') + ' บันทึกแทนได้แม้ปิดรับแล้ว · ไซซ์เว้นว่างได้ (จะขึ้น "รอระบุไซซ์") · ระบบบันทึกประวัติว่าใครแก้อะไร</div>';
+  var m = modal({ title: (r.status ? 'แก้ไขแทน' : 'บันทึกแทน'), size: 'lg', body: body, foot: (r.status ? '<button class="btn danger" id="pxReset" style="margin-right:auto">' + ic('trash') + 'ล้างคำตอบ</button>' : '') + '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="pxSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
+  var drawSz = function () {
+    var v = $('#pxPick', m.el).value, it = v && v !== 'X' ? IT[v] : null, box = $('#pxSz', m.el);
+    if (!it || !pkCharts(cfg, it).length) { box.innerHTML = ''; return; }
+    if (szFor !== it.key) { sz = pkInitSizes(cfg, it, r.status === 'ORDERED' && r.optKey === it.key ? r.sizes : null, r.gender); szFor = it.key; }
+    box.innerHTML = pkSizeSteps(cfg, it, sz, { admin: true });
+    pkBindSizes(box, cfg, sz, drawSz);
+  };
+  $('#pxPick', m.el).onchange = drawSz; drawSz();
+  $('#pxElig', m.el).onclick = function () { eligEditModal(TR.ev, { empCode: r.empCode, name: r.name, position: r.position, unit: r.unit || r.division, optKeys: r.opts || '' }, function (d) { r.opts = d.optKeys.join(','); m.close(); drawTracking(); proxyPickModal(r); }); };
   $('#pxSave').onclick = function () {
     var v = $('#pxPick').value; if (!v) return toast('กรุณาเลือกรายการ', 'warn');
-    busy(this, api('saveResponseFor', { eventId: TR.id, empCode: r.empCode, status: v === 'X' ? 'DECLINED' : 'ORDERED', optKey: v === 'X' ? '' : v, note: $('#pxNote').value.trim() })).then(function (d) {
-      m.close(); Object.assign(r, { status: d.mine.status, optKey: d.mine.optKey, updatedAt: d.mine.updatedAt, byAdmin: 1, note: d.mine.note }); delete TR.sel[r.empCode];
-      drawTracking(); toast(r.name + ' · ' + (v === 'X' ? lbl : IT[v].label), 'ok', 'บันทึกแทนเรียบร้อย');
+    var it = v === 'X' ? null : IT[v];
+    busy(this, api('saveResponseFor', { eventId: TR.id, empCode: r.empCode, status: v === 'X' ? 'DECLINED' : 'ORDERED', optKey: v === 'X' ? '' : v, sizes: it ? pkSizesPayload(cfg, it, sz) : null, note: $('#pxNote').value.trim() })).then(function (d) {
+      m.close(); Object.assign(r, { status: d.mine.status, optKey: d.mine.optKey, sizeCode: d.mine.sizeCode, sizes: (d.mine.answer || {}).sizes || null, updatedAt: d.mine.updatedAt, byAdmin: 1, note: d.mine.note });
+      r.sizeMissing = it ? pkCharts(cfg, it).filter(function (ch) { return !pkChartOk(ch, (r.sizes || {})[ch.id]); }).length : 0; delete TR.sel[r.empCode];
+      drawTracking(); toast(r.name + ' · ' + (v === 'X' ? lbl : IT[v].label) + (d.mine.sizeCode ? ' · ' + d.mine.sizeCode : ''), 'ok', 'บันทึกแทนเรียบร้อย');
     }).catch(errToast);
   };
   var rs = $('#pxReset');
   if (rs) rs.onclick = function () {
     confirmBox({ title: 'ล้างคำตอบของ ' + r.name + '?', msg: 'สถานะจะกลับเป็น "ยังไม่ตอบ" (มีบันทึกประวัติ)', danger: true, ok: 'ล้างคำตอบ' }).then(function (y) {
       if (!y) return;
-      api('resetResponse', { eventId: TR.id, empCode: r.empCode, reason: $('#pxNote') ? $('#pxNote').value : '' }).then(function () { m.close(); r.status = ''; r.optKey = ''; drawTracking(); toast('ล้างคำตอบแล้ว', 'ok'); }).catch(errToast);
+      api('resetResponse', { eventId: TR.id, empCode: r.empCode, reason: $('#pxNote') ? $('#pxNote').value : '' }).then(function () { m.close(); r.status = ''; r.optKey = ''; r.sizeCode = ''; r.sizes = null; r.sizeMissing = 0; drawTracking(); toast('ล้างคำตอบแล้ว', 'ok'); }).catch(errToast);
     });
   };
 }
@@ -616,7 +646,7 @@ function editEvent(id) {
         '<div id="audBox" style="margin-top:12px;' + (a.mode === 'FILTER' ? '' : 'display:none') + '"><div class="field"><label class="f">ฝ่าย (ชื่อเต็ม คั่นด้วยบรรทัด)</label><textarea class="input" data-a="divisions" placeholder="รพ.สมเด็จฯ - ฝ่ายการพยาบาล">' + esc((a.divisions || []).join('\n')) + '</textarea></div>' +
         '<div class="grid2"><div class="field"><label class="f">กลุ่มบุคลากร</label><textarea class="input" data-a="groups">' + esc((a.groups || []).join('\n')) + '</textarea></div><div class="field"><label class="f">ตำแหน่ง</label><textarea class="input" data-a="positions">' + esc((a.positions || []).join('\n')) + '</textarea></div></div>' +
         '<div class="field"><label class="f">รหัสบุคลากรเพิ่มเติม (คั่นด้วย , หรือบรรทัด)</label><textarea class="input" data-a="codes">' + esc((a.codes || []).join('\n')) + '</textarea><div class="hint">เงื่อนไขต่างหมวดต้องตรงทุกข้อ · รหัสที่ระบุได้สิทธิ์เสมอ</div></div></div></div>') + '</div></div>' +
-        '<div class="stack">' + (isTh(ED) ? thEditor(ED) : ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : ED.type === 'PICK' ? pickEditor(c) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
+        '<div class="stack">' + (isTh(ED) ? thEditor(ED) : ED.type === 'CHOICE' || ED.type === 'ORDER' ? choiceEditor(c, ED.type) : ED.type === 'PICK' ? pickEditor(Object.defineProperty(c, '_color', { value: ED.color, enumerable: false, configurable: true })) : '<div class="card pad empty">' + ic('layers') + '<p>แบบฟอร์มสำหรับกิจกรรมชนิดนี้จะเปิดในรุ่นถัดไป</p></div>') + '</div></div>';
       $('#page').innerHTML = h;
       bindEditor();
       if (ED.type === 'PICK') bindPickEditor(ED, readForm, draw, isNew);
@@ -1170,6 +1200,226 @@ function orderSettingsHtml(c) {
 }
 
 
+/* =================================================================== 18 พ.ย. 69: ตารางไซซ์ · ผู้มีสิทธิ์รายคน (กิจกรรม PICK) */
+/** แม่แบบตารางไซซ์ — จากไฟล์ "05_แม่แบบนำเข้าข้อมูล/ขนาด เสื้อ และกางเกง.xlsx" (ต้องตรงกับ 3_ชุดทดสอบ/size_presets.js) */
+var SIZE_PRESETS = (function () {
+  var sz = function (codes, rows) { return codes.map(function (c, i) { return { code: c, m: rows.map(function (r) { return r[i]; }) }; }); };
+  return [
+    { id: 'ER_TOP', name: 'เสื้อคอวี ชุด ER', part: 'เสื้อ', unit: 'นิ้ว', measures: ['ไหล่', 'รอบอก', 'ความยาวตัว', 'ความยาวแขน', 'ชายเสื้อกว้าง'], custom: true, customHint: 'เช่น รอบอก 54 นิ้ว',
+      variants: [
+        { key: 'M', label: 'ชาย', sizes: sz(['SS', 'S', 'M', 'L', 'XL', 'XXL'], [[16, 17, 18, 19, 20, 21], [40, 42, 44, 46, 48, 50], [28, 29, 30, 31, 32, 33], [8.5, 9, 9.5, 10, 10.5, 11], [20.5, 21.5, 22.5, 23.5, 24.5, 25.5]]) },
+        { key: 'F', label: 'หญิง', sizes: sz(['SS', 'S', 'M', 'L', 'XL', 'XXL'], [[14, 15, 16, 17, 18, 19], [36, 38, 40, 42, 44, 46], [25, 26, 27, 28, 29, 30], [8, 8.5, 9, 9.5, 10, 10.5], [19, 20, 21, 22, 23, 24]]) }] },
+    { id: 'ER_PANTS', name: 'กางเกงขายาว ทรงกระบอก ชุด ER', part: 'กางเกง', unit: 'นิ้ว', measures: ['รอบเอว', 'รอบสะโพก', 'ความยาว', 'ปลายขากว้าง', 'เป้ายื่น', 'ความยาวเป้าหลัง'], custom: true, customHint: 'เช่น รอบเอว 40 นิ้ว',
+      variants: [{ key: 'U', label: 'ทั่วไป', sizes: sz(['26', '28', '30', '32', '34', '36', '38'], [[26, 28, 30, 32, 34, 36, 38], [39, 39, 39, 41, 43, 45, 46], [39, 39, 39, 40, 40, 40, 41], [7.5, 7.5, 7.5, 8, 8.5, 8.5, 9], [10, 10, 10, 10.5, 11, 11, 11.5], [13.5, 13.5, 13.5, 14, 14.5, 14.5, 15]]) }] },
+    { id: 'TR_TOP', name: 'เสื้อคอวี ผ้าโทเร 80000', part: 'เสื้อ', unit: 'นิ้ว', measures: ['รอบอก', 'ความยาว'], custom: true, customHint: 'เช่น รอบอก 56 นิ้ว',
+      variants: [{ key: 'U', label: 'ทั่วไป', sizes: sz(['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'], [[42, 44, 46, 48, 50, 52, 54], [26, 27, 28, 30, 30, 30, 30]]) }] },
+    { id: 'TR_PANTS', name: 'กางเกง ผ้าโทเร 80000', part: 'กางเกง', unit: 'นิ้ว', measures: ['รอบเอว', 'รอบสะโพก', 'ความยาว', 'ขากว้าง'], custom: true, customHint: 'เช่น รอบเอว 50 นิ้ว',
+      variants: [{ key: 'U', label: 'ทั่วไป', sizes: sz(['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'], [['24-36', '26-38', '28-40', '28-44', '30-46', '32-48', 'มากกว่า 48'], [38, 40, 42, 44, 46, 48, ''], [37, 38, 38, 39, 40, 40, ''], [16, 16, 17, 17, 18, 18, '']]) }] }
+  ];
+})();
+/** ตารางสรุปไซซ์ของรายการหนึ่ง (แดชบอร์ด) */
+function pkSizeSumHtml(cfg, x) {
+  return (x.sizes.charts || []).map(function (st) {
+    var ch = ((cfg || {}).sizeCharts || []).filter(function (c) { return c.id === st.id; })[0]; if (!ch) return '';
+    var multi = ch.variants.length > 1, codes = [];
+    ch.variants.forEach(function (v) { v.sizes.forEach(function (s) { if (codes.indexOf(s.code) < 0) codes.push(s.code); }); });
+    var tot = 0;
+    var rowsH = ch.variants.map(function (v) {
+      var sum = 0, tds = codes.map(function (c) { var n = st.counts[(multi ? v.key : '') + '|' + c] || 0; sum += n; return '<td class="' + (n ? 'has' : '') + '">' + (n || '·') + '</td>'; }).join('');
+      tot += sum; return '<tr><th>' + esc(multi ? v.label || v.key : ch.part || ch.name) + '</th>' + tds + '<td class="r"><b>' + sum + '</b></td></tr>';
+    }).join('');
+    return '<div class="small muted" style="margin-top:8px">' + esc(ch.name) + '</div><div class="chartwrap"><table class="chart pkszt"><tr><th></th>' + codes.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '<th>รวม</th></tr>' + rowsH + '</table></div>' +
+      (st.custom.length ? '<div class="small" style="margin-top:4px">' + ic('edit') + ' ขนาดพิเศษ ' + st.custom.length + ' คน: <span class="muted">' + esc(st.custom.slice(0, 8).join(' · ')) + (st.custom.length > 8 ? ' …' : '') + '</span></div>' : '');
+  }).join('');
+}
+/** แก้/สร้างตารางไซซ์ (หน้าต่าง) → กด "ใช้ตารางนี้" แล้วต้องกด "บันทึก" กิจกรรมอีกครั้ง */
+function sizeChartModal(ED, idx, draw) {
+  var isNew = idx == null, ch = isNew ? { id: '', name: '', part: 'เสื้อ', unit: 'นิ้ว', measures: ['รอบอก', 'ความยาว'], custom: true, customHint: '', note: '', variants: [{ key: 'U', label: 'ทั่วไป', sizes: [{ code: 'S', m: [] }, { code: 'M', m: [] }, { code: 'L', m: [] }] }] }
+    : JSON.parse(JSON.stringify(ED.config.sizeCharts[idx]));
+  var m = modal({ title: isNew ? 'สร้างตารางไซซ์' : 'แก้ไขตารางไซซ์ · ' + esc(ch.name), size: 'xl', sticky: true, body: '', foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="scOk">' + ic('check') + 'ใช้ตารางนี้</button>' });
+  var read = function () {
+    var g = function (k) { var i = $('[data-sc="' + k + '"]', m.el); return i ? (i.type === 'checkbox' ? i.checked : i.value.trim()) : ch[k]; };
+    ch.id = String(g('id')).toUpperCase().replace(/[^A-Z0-9_-]/g, ''); ch.name = g('name'); ch.part = g('part'); ch.unit = g('unit'); ch.custom = g('custom'); ch.customHint = g('customHint'); ch.note = g('note');
+    var ms = String(g('measures')).split(/[,\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+    $$('[data-scv]', m.el).forEach(function (box) {
+      var v = ch.variants[+box.dataset.scv];
+      v.label = $('[data-scvl]', box).value.trim(); v.key = $('[data-scvk]', box).value.trim().toUpperCase();
+      v.sizes = $$('tr[data-scs]', box).map(function (tr) {
+        var o = { code: $('[data-f=code]', tr).value.trim().toUpperCase(), m: $$('[data-mi]', tr).map(function (i) { var x = i.value.trim(); return x !== '' && !isNaN(+x) ? +x : x; }) };
+        if ($('[data-f=hidden]', tr).checked) o.hidden = true; return o;
+      });
+    });
+    // หัวข้อขนาดเปลี่ยน → จับคู่ค่าเดิมตามชื่อหัวข้อ
+    if (ms.join('|') !== (ch.measures || []).join('|')) {
+      var old = ch.measures || [];
+      ch.variants.forEach(function (v) { v.sizes.forEach(function (s) { s.m = ms.map(function (name, i) { var j = old.indexOf(name); return j >= 0 ? s.m[j] : (old.length === ms.length ? s.m[i] : ''); }); }); });
+      ch.measures = ms;
+    }
+  };
+  var render = function () {
+    var ms = ch.measures || [];
+    $('.mb', m.el).innerHTML = '<div class="grid3"><div class="field"><label class="f">ชื่อตาราง *</label><input class="input" data-sc="name" value="' + esc(ch.name) + '" placeholder="เช่น เสื้อคอวี ชุด ER"></div>' +
+      '<div class="field"><label class="f">ส่วน (แสดงเป็น "เลือกไซซ์…")</label><input class="input" data-sc="part" value="' + esc(ch.part || '') + '" list="dlPart" placeholder="เสื้อ / กางเกง"><datalist id="dlPart"><option value="เสื้อ"><option value="กางเกง"><option value="ชุด"><option value="เสื้อกาวน์"></datalist></div>' +
+      '<div class="grid2"><div class="field"><label class="f">รหัสตาราง</label><input class="input" data-sc="id" value="' + esc(ch.id) + '" ' + (isNew ? 'placeholder="เช่น ER_TOP"' : 'readonly title="รหัสเปลี่ยนไม่ได้"') + '></div><div class="field"><label class="f">หน่วย</label><input class="input" data-sc="unit" value="' + esc(ch.unit || '') + '"></div></div></div>' +
+      '<div class="field"><label class="f">หัวข้อขนาด (คั่นด้วย , ตามลำดับคอลัมน์)</label><input class="input" data-sc="measures" id="scMs" value="' + esc(ms.join(', ')) + '" placeholder="ไหล่, รอบอก, ความยาวตัว"><div class="hint">2 หัวข้อแรกจะแสดงใต้ปุ่มไซซ์ · ที่เหลือดูได้จากปุ่ม "ตารางไซซ์"</div></div>' +
+      '<div class="grid2"><div><label class="switch"><input type="checkbox" data-sc="custom" ' + (ch.custom !== false ? 'checked' : '') + '><span class="tr"></span>มีปุ่ม "ขนาดพิเศษ" ให้กรอกขนาดเอง</label></div><div class="field"><input class="input" data-sc="customHint" value="' + esc(ch.customHint || '') + '" placeholder="ตัวอย่างในช่องขนาดพิเศษ เช่น รอบอก 56 นิ้ว"></div></div>' +
+      '<div class="field"><label class="f">หมายเหตุใต้ตาราง (ถ้ามี)</label><input class="input" data-sc="note" value="' + esc(ch.note || '') + '" placeholder="เช่น ขนาดโดยประมาณ คลาดเคลื่อน ± 1 นิ้ว"></div>' +
+      ch.variants.map(function (v, vi) {
+        return '<div class="pkvbox" data-scv="' + vi + '"><div class="row" style="flex-wrap:nowrap;margin-bottom:8px"><span class="small muted" style="white-space:nowrap">แบบ</span><input class="input" data-scvl value="' + esc(v.label || '') + '" placeholder="เช่น ชาย / หญิง / ทั่วไป" style="max-width:220px"><input class="input" data-scvk value="' + esc(v.key) + '" title="รหัสแบบ" style="width:64px">' +
+          '<span style="flex:1"></span><button type="button" class="btn sm" data-scpaste="' + vi + '">' + ic('copy') + 'วางจาก Excel</button>' + (ch.variants.length > 1 ? '<button type="button" class="iconbtn" data-scvdel="' + vi + '" title="ลบแบบนี้">' + ic('trash') + '</button>' : '') + '</div>' +
+          '<div class="tablewrap"><table class="t pkedit"><thead><tr><th style="width:80px">SIZE</th>' + ms.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '<th style="width:52px" title="ซ่อนจากบุคลากร">ซ่อน</th><th style="width:40px"></th></tr></thead><tbody>' +
+          v.sizes.map(function (s, si) { return '<tr data-scs="' + si + '"><td><input class="input" data-f="code" value="' + esc(s.code) + '"></td>' + ms.map(function (x, i) { var val = s.m && s.m[i]; return '<td><input class="input" data-mi="' + i + '" value="' + esc(val == null ? '' : val) + '"></td>'; }).join('') +
+            '<td style="text-align:center"><input type="checkbox" data-f="hidden" ' + (s.hidden ? 'checked' : '') + '></td><td><button type="button" class="iconbtn" data-scsdel="' + vi + '|' + si + '">' + ic('trash') + '</button></td></tr>'; }).join('') +
+          '</tbody></table></div><button type="button" class="btn sm" data-scsadd="' + vi + '" style="margin-top:6px">' + ic('plus') + 'เพิ่มไซซ์</button></div>';
+      }).join('') + '<button type="button" class="btn sm" id="scVAdd">' + ic('plus') + 'เพิ่มแบบ (เช่น แยกชาย / หญิง)</button>' +
+      '<div class="small muted" style="margin-top:10px">' + ic('info') + ' ไซซ์ที่มีผู้เลือกแล้วลบไม่ได้ ให้ติ๊ก "ซ่อน" แทน · ใส่ค่าเป็นช่วงหรือข้อความได้ เช่น 24-36, มากกว่า 48</div>';
+    $('#scMs', m.el).onchange = function () { read(); render(); };
+    $('#scVAdd', m.el).onclick = function () { read(); var n = ch.variants.length; ch.variants.push({ key: n === 1 && ch.variants[0].key === 'U' ? 'F' : 'V' + (n + 1), label: '', sizes: ch.variants[0].sizes.map(function (s) { return { code: s.code, m: [] }; }) }); if (n === 1 && ch.variants[0].key === 'U') { ch.variants[0].key = 'M'; if (!ch.variants[0].label || ch.variants[0].label === 'ทั่วไป') ch.variants[0].label = 'ชาย'; ch.variants[1].label = 'หญิง'; } render(); };
+    $$('[data-scvdel]', m.el).forEach(function (b) { b.onclick = function () { read(); ch.variants.splice(+b.dataset.scvdel, 1); render(); }; });
+    $$('[data-scsadd]', m.el).forEach(function (b) { b.onclick = function () { read(); ch.variants[+b.dataset.scsadd].sizes.push({ code: '', m: [] }); render(); var l = $$('[data-scv="' + b.dataset.scsadd + '"] [data-f=code]', m.el); if (l.length) l[l.length - 1].focus(); }; });
+    $$('[data-scsdel]', m.el).forEach(function (b) { b.onclick = function () { read(); var p = b.dataset.scsdel.split('|'); ch.variants[+p[0]].sizes.splice(+p[1], 1); render(); }; });
+    $$('[data-scpaste]', m.el).forEach(function (b) { b.onclick = function () { read(); pasteSizeTable(ch, +b.dataset.scpaste, render); }; });
+  };
+  render();
+  $('#scOk').onclick = function () {
+    read();
+    if (!ch.name) return toast('กรุณาตั้งชื่อตาราง', 'warn');
+    if (isNew && !ch.id) ch.id = (/กางเกง/.test(ch.part) ? 'PANTS' : 'SIZE') + (ED.config.sizeCharts || []).length + 1;
+    var others = (ED.config.sizeCharts || []).filter(function (x, i) { return i !== idx; });
+    if (others.some(function (x) { return x.id === ch.id; })) return toast('รหัสตาราง ' + ch.id + ' ซ้ำกับตารางอื่น', 'warn');
+    for (var vi = 0; vi < ch.variants.length; vi++) {
+      var v = ch.variants[vi], seen = {}; v.sizes = v.sizes.filter(function (s) { return s.code; });
+      if (!v.sizes.length) return toast('แบบ "' + (v.label || v.key) + '" ต้องมีไซซ์อย่างน้อย 1 ไซซ์', 'warn');
+      for (var si = 0; si < v.sizes.length; si++) { if (seen[v.sizes[si].code]) return toast('ไซซ์ ' + v.sizes[si].code + ' ซ้ำในแบบ "' + (v.label || v.key) + '"', 'warn'); seen[v.sizes[si].code] = 1; }
+    }
+    if (isNew) ED.config.sizeCharts = others.concat([ch]); else ED.config.sizeCharts[idx] = ch;
+    m.close(); draw(); toast('ใช้ตารางไซซ์ "' + ch.name + '" แล้ว — กด "บันทึก" กิจกรรมเพื่อบันทึกจริง', 'ok');
+  };
+}
+/** วางตารางที่คัดลอกจาก Excel — รองรับทั้งแบบไฟล์ (แถวบน = SIZE, แถวถัดไป = หัวข้อขนาด) และแบบคอลัมน์ (คอลัมน์แรก = SIZE) */
+function pasteSizeTable(ch, vi, render) {
+  var m = modal({ title: 'วางตารางไซซ์จาก Excel', size: 'lg', body: '<div class="small muted" style="margin-bottom:8px">คัดลอกช่วงตารางใน Excel (รวมแถว SIZE) แล้ววางที่นี่ · เช่น<br><code>SIZE ⇥ SS ⇥ S ⇥ M …</code><br><code>ไหล่ ⇥ 16 ⇥ 17 ⇥ 18 …</code></div><textarea class="input" id="psT" style="min-height:200px;font-family:monospace"></textarea><div class="small" id="psInfo" style="margin-top:6px"></div>',
+    foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="psOk" disabled>' + ic('check') + 'ใช้ข้อมูลนี้</button>' });
+  var parsed = null;
+  var parse = function (txt) {
+    var rows = txt.split(/\r?\n/).map(function (l) { return l.split('\t').map(function (x) { return x.trim(); }); }).filter(function (r) { return r.filter(Boolean).length >= 2; });
+    if (rows.length < 2) return null;
+    var short = function (x) { return String(x).length <= 5; };
+    var rowWise = rows[0].slice(1).filter(Boolean).every(short) && !rows.slice(1).every(function (r) { return short(r[0]); });
+    var codes, ms, vals;
+    if (rowWise) { codes = rows[0].slice(1).filter(Boolean); ms = rows.slice(1).map(function (r) { return r[0]; }); vals = codes.map(function (c, i) { return rows.slice(1).map(function (r) { return r[i + 1] == null ? '' : r[i + 1]; }); }); }
+    else { ms = rows[0].slice(1).filter(Boolean); codes = rows.slice(1).map(function (r) { return r[0]; }); vals = rows.slice(1).map(function (r) { return r.slice(1, ms.length + 1); }); }
+    codes = codes.map(function (c) { return String(c).toUpperCase(); });
+    return { measures: ms, sizes: codes.map(function (c, i) { return { code: c, m: vals[i].map(function (x) { return x !== '' && !isNaN(+x) ? +x : x; }) }; }) };
+  };
+  $('#psT', m.el).oninput = function () {
+    parsed = parse(this.value);
+    $('#psInfo', m.el).innerHTML = parsed ? '<span style="color:var(--ok)">' + ic('check') + ' พบ ' + parsed.sizes.length + ' ไซซ์ (' + esc(parsed.sizes.map(function (s) { return s.code; }).join(', ')) + ') · หัวข้อ: ' + esc(parsed.measures.join(', ')) + '</span>' : '<span class="muted">ยังอ่านตารางไม่ได้</span>';
+    $('#psOk', m.el).disabled = !parsed;
+  };
+  $('#psOk', m.el).onclick = function () {
+    if (!parsed) return;
+    var old = ch.measures || [], all = old.slice();
+    parsed.measures.forEach(function (x) { if (all.indexOf(x) < 0) all.push(x); });
+    ch.variants.forEach(function (v, i) { if (i === vi) return; v.sizes.forEach(function (s) { s.m = all.map(function (name) { var j = old.indexOf(name); return j >= 0 ? s.m[j] : ''; }); }); });
+    ch.variants[vi].sizes = parsed.sizes.map(function (s) { return { code: s.code, m: all.map(function (name) { var j = parsed.measures.indexOf(name); return j >= 0 ? s.m[j] : ''; }) }; });
+    ch.measures = all; m.close(); render(); toast('วางตาราง ' + parsed.sizes.length + ' ไซซ์แล้ว', 'ok');
+  };
+}
+/** หน้าต่าง "ผู้มีสิทธิ์รายคน" */
+function eligPeopleModal(ED) {
+  var st = { rows: [], q: '', page: 1, size: 25 }, IT = pickItems(ED);
+  var m = modal({ title: ic('users') + ' ผู้มีสิทธิ์รายคน · ' + esc(ED.title), size: 'xl', body: skel(2), foot: '<button class="btn" data-x>ปิด</button>' });
+  var load = function () {
+    return api('listEligPeople', { eventId: ED.id }, { fresh: true }).then(function (d) {
+      st.rows = d.rows.map(function (r) { var o = {}; d.cols.forEach(function (c, i) { o[c] = r[i]; }); return o; }); render();
+    }).catch(function (e) { errToast(e); $('.mb', m.el).innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+  };
+  var lbl = function (k) { return IT[k] ? IT[k].label : k; };
+  var render = function () {
+    var q = st.q.toLowerCase(), list = st.rows.filter(function (r) { return !q || (r.empCode + ' ' + r.name + ' ' + r.unit + ' ' + r.position + ' ' + String(r.optKeys).split(',').map(lbl).join(' ')).toLowerCase().indexOf(q) >= 0; });
+    list.sort(function (a, b) { return (b.updatedAt || '') > (a.updatedAt || '') ? 1 : (b.updatedAt || '') < (a.updatedAt || '') ? -1 : (a.empCode > b.empCode ? 1 : -1); });
+    var pages = Math.max(1, Math.ceil(list.length / st.size)); if (st.page > pages) st.page = pages;
+    var sl = list.slice((st.page - 1) * st.size, st.page * st.size);
+    $('.mb', m.el).innerHTML = '<div class="row" style="margin-bottom:10px"><input class="input search" id="epQ" placeholder="ค้นหา รหัส / ชื่อ / หน่วย / รายการ" value="' + esc(st.q) + '" style="flex:1;min-width:200px"><button type="button" class="btn primary" id="epAdd">' + ic('plus') + 'เพิ่มรายชื่อ</button></div>' +
+      '<div class="small muted" style="margin-bottom:6px">ผู้มีสิทธิ์ทั้งหมด ' + nf(st.rows.length) + ' คน' + (q ? ' · ตรงกับคำค้น ' + nf(list.length) + ' คน' : '') + ' · เรียงตามที่แก้ล่าสุด</div>' +
+      '<div class="tablewrap"><table class="t"><thead><tr><th>รหัส / ชื่อ</th><th>ตำแหน่ง / หน่วย</th><th>รายการที่มีสิทธิ์เลือก</th><th>คำตอบ</th><th></th></tr></thead><tbody>' +
+      (sl.length ? sl.map(function (r) {
+        var ks = String(r.optKeys || '').split(',').filter(Boolean);
+        return '<tr><td><div class="nm">' + esc(r.name || '(ไม่อยู่ในรายชื่อบุคลากร)') + '</div><div class="sub num">' + esc(r.empCode) + (r.inRoster ? '' : ' · <span style="color:var(--warn)">ไม่อยู่ในรายชื่อบุคลากร</span>') + '</div></td>' +
+          '<td class="small">' + esc(r.position || '-') + '<div class="sub">' + esc(r.unit || '') + '</div></td>' +
+          '<td class="small">' + (ks.length ? ks.map(function (k) { return '<div>• ' + esc(lbl(k)) + '</div>'; }).join('') : '<span class="muted">ไม่มีรายการ (เลือกได้เฉพาะ "ไม่ประสงค์")</span>') + (r.note ? '<div class="sub">' + ic('info') + ' ' + esc(r.note) + '</div>' : '') + '</td>' +
+          '<td class="small">' + (r.status === 'ORDERED' ? '<span class="chip ok">' + esc(lbl(r.optKey)) + '</span>' + (ks.indexOf(r.optKey) < 0 ? '<div class="sub" style="color:var(--warn)">นอกสิทธิ์ปัจจุบัน</div>' : '') : r.status === 'DECLINED' ? '<span class="chip">ไม่ประสงค์</span>' : '<span class="muted">ยังไม่ตอบ</span>') + '</td>' +
+          '<td class="r" style="white-space:nowrap"><button type="button" class="btn sm" data-epe="' + esc(r.empCode) + '">' + ic('edit') + 'แก้สิทธิ์</button> <button type="button" class="iconbtn" data-epd="' + esc(r.empCode) + '" title="ลบออกจากผู้มีสิทธิ์">' + ic('trash') + '</button></td></tr>';
+      }).join('') : '<tr><td colspan="5"><div class="empty">' + ic('search') + '<p>' + (st.rows.length ? 'ไม่พบตามคำค้น' : 'ยังไม่มีผู้มีสิทธิ์ — กด "เพิ่มรายชื่อ" หรือนำเข้าจาก Excel') + '</p></div></td></tr>') + '</tbody></table></div>' +
+      '<div class="pager"><span>แสดง ' + (list.length ? ((st.page - 1) * st.size + 1) + '–' + Math.min(list.length, st.page * st.size) : 0) + ' จาก ' + nf(list.length) + ' คน</span><div class="row"><button class="btn sm" id="epPrev" ' + (st.page <= 1 ? 'disabled' : '') + '>' + ic('arrowl') + '</button><span class="num">หน้า ' + st.page + '/' + pages + '</span><button class="btn sm" id="epNext" ' + (st.page >= pages ? 'disabled' : '') + '>' + ic('arrowr') + '</button></div></div>';
+    var qi = $('#epQ', m.el); qi.oninput = debounce(function () { st.q = qi.value.trim(); st.page = 1; render(); var x = $('#epQ', m.el); x.focus(); x.setSelectionRange(x.value.length, x.value.length); }, 250);
+    $('#epPrev', m.el).onclick = function () { st.page--; render(); };
+    $('#epNext', m.el).onclick = function () { st.page++; render(); };
+    $('#epAdd', m.el).onclick = function () { eligAddModal(ED, done); };
+    $$('[data-epe]', m.el).forEach(function (b) { b.onclick = function () { var r = st.rows.filter(function (x) { return x.empCode === b.dataset.epe; })[0]; eligEditModal(ED, r, done); }; });
+    $$('[data-epd]', m.el).forEach(function (b) { b.onclick = function () {
+      var r = st.rows.filter(function (x) { return x.empCode === b.dataset.epd; })[0];
+      confirmBox({ title: 'ลบ ' + (r.name || r.empCode) + ' ออกจากผู้มีสิทธิ์?', msg: 'คนนี้จะมองไม่เห็นกิจกรรมนี้อีก' + (r.status ? '<br><b>คำตอบที่บันทึกไว้แล้วยังอยู่</b> (ล้างได้ที่หน้าติดตาม)' : '') + '<br>มีบันทึกประวัติ', danger: true, ok: 'ลบออก' }).then(function (y) {
+        if (!y) return;
+        api('removeEligibility', { eventId: ED.id, empCode: r.empCode }).then(function () { toast('ลบ ' + (r.name || r.empCode) + ' ออกจากผู้มีสิทธิ์แล้ว', 'ok'); done(); }).catch(errToast);
+      });
+    }; });
+  };
+  var done = function () { load(); if ($('#elSum')) loadEligibilitySummary(ED); };
+  load();
+}
+/** ค้นหาบุคลากรเพื่อเพิ่มเป็นผู้มีสิทธิ์ */
+function eligAddModal(ED, after) {
+  var m = modal({ title: 'เพิ่มผู้มีสิทธิ์', size: 'lg', body: '<div class="field"><label class="f">ค้นหาบุคลากร</label><input class="input search" id="eaQ" placeholder="พิมพ์รหัส หรือ ชื่อ/นามสกุล (อย่างน้อย 2 ตัวอักษร)"></div><div id="eaRes"><div class="small muted">' + ic('info') + ' ค้นหาจากรายชื่อบุคลากรในระบบ</div></div>', foot: '<button class="btn" data-x>ปิด</button>' });
+  var seq = 0;
+  $('#eaQ', m.el).oninput = debounce(function () {
+    var q = this.value.trim(), my = ++seq, box = $('#eaRes', m.el);
+    if (q.length < 2) { box.innerHTML = '<div class="small muted">' + ic('info') + ' พิมพ์อย่างน้อย 2 ตัวอักษร</div>'; return; }
+    box.innerHTML = skel(1);
+    api('findPeopleForElig', { eventId: ED.id, q: q }).then(function (d) {
+      if (my !== seq) return;
+      var digits = /^\d{4,10}$/.test(q), exact = d.rows.some(function (r) { return r.empCode === q; });
+      box.innerHTML = (d.rows.length ? '<div class="ealist">' + d.rows.map(function (r, i) {
+        return '<button type="button" class="eaitem" data-ea="' + i + '"><div class="avatar" style="width:34px;height:34px;font-size:13px">' + esc(initials(r.name)) + '</div><div style="flex:1;min-width:0;text-align:left"><b>' + esc(r.name) + '</b><div class="small muted">' + esc(r.empCode + ' · ' + (r.position || '') + ' · ' + (r.unit || r.division || '')) + '</div></div>' +
+          (r.optKeys != null ? '<span class="chip ok">มีสิทธิ์แล้ว ' + String(r.optKeys).split(',').filter(Boolean).length + ' รายการ</span>' : '<span class="chip acc">' + ic('plus') + ' เพิ่ม</span>') + '</button>';
+      }).join('') + '</div>' + (d.rows.length >= 30 ? '<div class="small muted">แสดง 30 คนแรก — พิมพ์ให้เจาะจงขึ้น</div>' : '') : '<div class="empty-note">' + ic('search') + ' ไม่พบในรายชื่อบุคลากร</div>') +
+        (digits && !exact ? '<button type="button" class="btn" id="eaRaw" style="margin-top:10px">' + ic('plus') + 'เพิ่มรหัส ' + esc(q) + ' (ยังไม่อยู่ในรายชื่อบุคลากร)</button>' : '');
+      $$('[data-ea]', box).forEach(function (b) { b.onclick = function () { var r = d.rows[+b.dataset.ea]; m.close(); eligEditModal(ED, { empCode: r.empCode, name: r.name, position: r.position, unit: r.unit || r.division, optKeys: r.optKeys || '', isNew: r.optKeys == null }, after); }; });
+      var raw = $('#eaRaw', box); if (raw) raw.onclick = function () { m.close(); eligEditModal(ED, { empCode: q, name: '', position: '', unit: '', optKeys: '', isNew: true }, after); };
+    }).catch(errToast);
+  }, 300);
+}
+/** แก้สิทธิ์ของคนหนึ่ง: ติ๊กรายการที่เลือกได้ (กี่รายการก็ได้) + หมายเหตุ */
+function eligEditModal(ED, p, after) {
+  var cfg = ED.config || {}, sel = String(p.optKeys || '').split(',').filter(Boolean), q = '';
+  var m = modal({ title: (p.isNew ? 'เพิ่มผู้มีสิทธิ์' : 'แก้สิทธิ์การเลือก'), size: 'lg', body: '', foot: '<button class="btn" data-x>ยกเลิก</button><button class="btn primary" id="eeSave" data-busy="กำลังบันทึก…">' + ic('check') + 'บันทึก</button>' });
+  var render = function () {
+    var items = (cfg.items || []).filter(function (it) { return !q || (it.key + ' ' + it.label + ' ' + (it.kind || '')).toLowerCase().indexOf(q) >= 0; });
+    $('.mb', m.el).innerHTML = '<div class="row" style="margin-bottom:12px"><div class="avatar">' + esc(initials(p.name || p.empCode)) + '</div><div><b>' + esc(p.name || 'รหัส ' + p.empCode) + '</b><div class="small muted">' + esc([p.empCode, p.position, p.unit].filter(Boolean).join(' · ')) + '</div></div></div>' +
+      '<div class="row between" style="margin-bottom:8px"><b>รายการที่คนนี้เลือกได้ <span class="chip acc num" id="eeN">' + sel.length + '</span></b><input class="input search" id="eeQ" placeholder="กรองรายการ" value="' + esc(q) + '" style="max-width:220px"></div>' +
+      '<div class="eegrid">' + (items.length ? items.map(function (it) {
+        var on = sel.indexOf(it.key) >= 0, cs = pkCharts(cfg, it);
+        return '<label class="eeitem' + (on ? ' on' : '') + '"><input type="checkbox" data-ee="' + esc(it.key) + '" ' + (on ? 'checked' : '') + '><span><b>' + esc(it.label) + '</b><small>' + esc([it.key, it.kind].concat(cs.length ? ['ไซซ์' + cs.map(pkPart).join(' + ')] : []).filter(Boolean).join(' · ')) + '</small></span></label>';
+      }).join('') : '<div class="muted small">ไม่พบรายการ</div>') + '</div>' +
+      '<div class="field" style="margin-top:12px"><label class="f">หมายเหตุ (ถ้ามี)</label><input class="input" id="eeNote" maxlength="200" value="' + esc(p.note || '') + '" placeholder="เช่น ย้ายหน่วยงาน / เพิ่มตามบันทึกข้อความ"></div>' +
+      '<div class="small muted">' + ic('info') + ' ไม่ติ๊กรายการใดเลย = เห็นกิจกรรม แต่เลือกได้เฉพาะ "' + esc(cfg.declineLabel || 'ไม่ประสงค์รับ') + '"</div>';
+    var qi = $('#eeQ', m.el); qi.oninput = debounce(function () { q = qi.value.trim().toLowerCase(); var nt = $('#eeNote', m.el).value; render(); $('#eeNote', m.el).value = nt; var x = $('#eeQ', m.el); x.focus(); x.setSelectionRange(x.value.length, x.value.length); }, 200);
+    $$('[data-ee]', m.el).forEach(function (c) { c.onchange = function () { var k = c.dataset.ee; sel = sel.filter(function (x) { return x !== k; }); if (c.checked) sel.push(k); c.closest('.eeitem').classList.toggle('on', c.checked); $('#eeN', m.el).textContent = sel.length; }; });
+  };
+  render();
+  $('#eeSave').onclick = function () {
+    var order = (cfg.items || []).map(function (it) { return it.key; }), keys = sel.slice().sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+    busy(this, api('setEligibility', { eventId: ED.id, empCode: p.empCode, optKeys: keys, note: $('#eeNote', m.el).value.trim() })).then(function (d) {
+      m.close();
+      toast((d.name || d.empCode) + ' · ' + (keys.length ? keys.length + ' รายการ' : 'ไม่มีรายการ'), 'ok', d.isNew ? 'เพิ่มผู้มีสิทธิ์แล้ว' : 'แก้สิทธิ์แล้ว');
+      if (d.warn) modal({ title: ic('alert') + ' โปรดตรวจสอบ', body: '<p>' + esc(d.warn) + '</p>' });
+      if (!d.inRoster) toast('รหัส ' + d.empCode + ' ยังไม่อยู่ในรายชื่อบุคลากร — จะเข้าระบบได้เมื่อมีข้อมูลใน HRMi/รายชื่อ', 'warn');
+      if (after) after(d);
+    }).catch(errToast);
+  };
+}
+
 /* =================================================================== กิจกรรมชนิด PICK: รายการ · รูป · ผู้มีสิทธิ์ */
 /** เลือกรูปจากเครื่อง → ย่อ → อัปโหลด → คืน 'img:ID' */
 function uploadImgFlow(eventId, btn) {
@@ -1179,15 +1429,38 @@ function uploadImgFlow(eventId, btn) {
   }).catch(function (e) { errToast(e, 'อัปโหลดรูปไม่สำเร็จ'); return null; });
 }
 function pickEditor(c) {
-  var items = c.items || [];
-  return '<div class="card"><div class="hd"><div><h3>รายการให้เลือก (' + items.length + ')</h3><div class="small muted">แต่ละคนจะเห็นเฉพาะรายการที่ตนมีสิทธิ์ (ตามรายชื่อที่นำเข้า)</div></div><button class="btn sm" id="pkAdd">' + ic('plus') + 'เพิ่มรายการ</button></div><div class="bd">' +
-    '<div class="grid2"><div class="field"><label class="f">ชื่อเรียกรวม</label><input class="input" data-pc="itemName" value="' + esc(c.itemName || '') + '" placeholder="เช่น ผ้า/ชุดปฏิบัติงาน ประจำปี 2570"></div>' +
-    '<div class="field"><label class="f">รูปปกกิจกรรม (ถ้ามี)</label><div class="row" style="flex-wrap:nowrap"><input class="input" data-pc="image" id="pkCover" value="' + esc(c.image || '') + '" placeholder="ว่าง = แสดงแถบสี"><button type="button" class="btn" id="pkCoverUp" data-busy="กำลังอัปโหลด…">' + ic('upload') + '</button></div></div></div>' +
+  var items = c.items || [], charts = c.sizeCharts || [], CH = {}; charts.forEach(function (x) { CH[x.id] = x; });
+  if (c.imageHero == null) c.imageHero = true;
+  var used = {}; items.forEach(function (it) { (it.charts || []).forEach(function (id) { used[id] = (used[id] || 0) + 1; }); });
+  // 18 พ.ย. 69: ภาพหน้าปกการ์ด (แบบเดียวกับ Town Hall)
+  var h = '<div class="card"><div class="hd"><div><h3>' + ic('upload') + ' ภาพหน้าปกการ์ด</h3><div class="small muted">แสดงบนการ์ดหน้าแรกของบุคลากร และหัวหน้ากิจกรรม</div></div></div><div class="bd"><div class="th-coveredit">' +
+    '<div class="th-coverprev pkcoverprev" style="--ec:' + esc(c._color || '#1A5FD0') + '">' + (c.image ? imgTag(c.image, '', 'style="object-fit:' + (c.imageFit === 'cover' ? 'cover' : 'contain') + '"') : '<div class="coverico">' + ic('shirt') + '</div>') + '</div>' +
+    '<div style="flex:1;min-width:240px"><div class="row" style="flex-wrap:nowrap"><input class="input" data-pc="image" id="pkCover" value="' + esc(c.image || '') + '" placeholder="ว่าง = การ์ดสีพร้อมไอคอนเสื้อ">' +
+    '<button type="button" class="btn" id="pkCoverUp" data-busy="กำลังอัปโหลด…">' + ic('upload') + 'อัปโหลดรูป</button>' + (c.image ? '<button type="button" class="iconbtn" id="pkCoverX" title="เอารูปออก">' + ic('x') + '</button>' : '') + '</div>' +
+    '<div class="hint">แนะนำภาพแนวนอน ประมาณ 1200 × 630 พิกเซล (ระบบย่อให้อัตโนมัติ) · ใส่ชื่อไฟล์ใน GitHub หรือ URL ก็ได้ · อัปโหลดแล้วกด "บันทึก"</div>' +
+    '<div class="grid2" style="margin-top:8px"><div class="field"><label class="f">การจัดภาพ</label><select class="input" data-pc="imageFit"><option value="contain">แสดงทั้งภาพ (มีพื้นว่างได้)</option><option value="cover" ' + (c.imageFit === 'cover' ? 'selected' : '') + '>เต็มกรอบ (ตัดขอบเล็กน้อย)</option></select></div>' +
+    '<div><label class="switch" style="margin-top:26px"><input type="checkbox" data-pc="imageHero" ' + (c.imageHero !== false ? 'checked' : '') + '><span class="tr"></span>แสดงภาพนี้ที่หัวหน้ากิจกรรมด้วย</label></div></div></div></div></div></div>';
+  // 18 พ.ย. 69: คลังตารางไซซ์
+  h += '<div class="card"><div class="hd"><div><h3>' + ic('table') + ' ตารางไซซ์ (' + charts.length + ')</h3><div class="small muted">สร้างตารางไซซ์ไว้ที่นี่ แล้วผูกกับรายการในคอลัมน์ "ไซซ์" ด้านบน · 1 รายการผูกได้หลายตาราง (เช่น เสื้อ + กางเกง)</div></div>' +
+    '<div class="row"><select class="input sm" id="pkPreset" style="width:auto"><option value="">+ เพิ่มจากแม่แบบ…</option>' + SIZE_PRESETS.map(function (x, i) { return '<option value="' + i + '"' + (CH[x.id] ? ' disabled' : '') + '>' + esc(x.name) + (CH[x.id] ? ' (มีแล้ว)' : '') + '</option>'; }).join('') + '</select><button type="button" class="btn sm" id="pkChNew">' + ic('plus') + 'ตารางว่าง</button></div></div><div class="bd">' +
+    (charts.length ? '<div class="pkchlist">' + charts.map(function (x, i) {
+      var vs = x.variants || [], n = vs.reduce(function (a, v) { return a + v.sizes.length; }, 0);
+      return '<div class="pkch"><div class="pkchic">' + ic(/กางเกง/.test(x.part) ? 'layers' : 'shirt') + '</div><div style="flex:1;min-width:0"><b>' + esc(x.name) + '</b> <span class="chip">' + esc(x.id) + '</span>' +
+        '<div class="small muted">' + esc((x.part ? x.part + ' · ' : '') + (vs.length > 1 ? vs.map(function (v) { return v.label || v.key; }).join(' / ') + ' · ' : '') + n + ' ไซซ์' + ((x.measures || []).length ? ' · ' + x.measures.join(', ') : '') + (x.custom !== false ? ' · มีขนาดพิเศษ' : '')) + '</div>' +
+        '<div class="small" style="margin-top:2px">' + (used[x.id] ? '<span style="color:var(--ok)">' + ic('check') + ' ใช้กับ ' + used[x.id] + ' รายการ</span>' : '<span style="color:var(--warn)">ยังไม่ได้ผูกกับรายการใด</span>') + '</div></div>' +
+        '<button type="button" class="btn sm" data-chview="' + i + '">' + ic('eye') + '</button><button type="button" class="btn sm" data-chedit="' + i + '">' + ic('edit') + 'แก้ไข</button><button type="button" class="iconbtn" data-chdel="' + i + '" title="ลบตาราง">' + ic('trash') + '</button></div>';
+    }).join('') + '</div>' : '<div class="empty-note">' + ic('info') + ' ยังไม่มีตารางไซซ์ — เลือก "เพิ่มจากแม่แบบ" (มีตารางจากไฟล์ขนาดเสื้อ/กางเกง ER และผ้าโทเร 80000) หรือสร้างตารางว่าง</div>') + '</div></div>';
+  h += '<div class="card"><div class="hd"><div><h3>รายการให้เลือก (' + items.length + ')</h3><div class="small muted">แต่ละคนจะเห็นเฉพาะรายการที่ตนมีสิทธิ์ · คอลัมน์ "ไซซ์" = ตารางไซซ์ที่ต้องเลือก (เว้นว่าง = ไม่ต้องเลือกไซซ์ เช่น ผ้า)</div></div><button class="btn sm" id="pkAdd">' + ic('plus') + 'เพิ่มรายการ</button></div><div class="bd">' +
+    '<div class="field"><label class="f">ชื่อเรียกรวม</label><input class="input" data-pc="itemName" value="' + esc(c.itemName || '') + '" placeholder="เช่น ผ้า/ชุดปฏิบัติงาน ประจำปี 2570"></div>' +
     '<label class="switch" style="margin-bottom:12px"><input type="checkbox" data-pc="showImages" ' + (c.showImages ? 'checked' : '') + '><span class="tr"></span>แสดงรูปประกอบของแต่ละรายการให้บุคลากรเห็น</label>' +
-    '<div class="tablewrap"><table class="t pkedit"><thead><tr><th style="width:62px">รหัส</th><th>ชื่อรายการ</th><th style="width:110px">ประเภท</th><th style="width:150px">รูป</th><th style="width:40px"></th></tr></thead><tbody>' +
+    '<div class="tablewrap"><table class="t pkedit"><thead><tr><th style="width:62px">รหัส</th><th>ชื่อรายการ</th><th style="width:96px">ประเภท</th><th style="width:190px">ไซซ์</th><th style="width:120px">รูป</th><th style="width:40px"></th></tr></thead><tbody>' +
     items.map(function (it, i) {
+      var mine = (it.charts || []).filter(function (id) { return CH[id]; }), free = charts.filter(function (x) { return mine.indexOf(x.id) < 0; });
       return '<tr data-pi="' + i + '"><td><input class="input" data-p="key" value="' + esc(it.key) + '" ' + (it._new ? '' : 'readonly title="รหัสเปลี่ยนไม่ได้หลังบันทึก"') + ' style="width:58px"></td><td><input class="input" data-p="label" value="' + esc(it.label) + '"></td>' +
-        '<td><input class="input" data-p="kind" value="' + esc(it.kind || '') + '" list="dlKind"></td><td><div class="row" style="flex-wrap:nowrap;gap:6px">' + (it.image ? '<span class="pthumb">' + imgTag(it.image, '') + '</span>' : '') + '<input type="hidden" data-p="image" value="' + esc(it.image || '') + '">' +
+        '<td><input class="input" data-p="kind" value="' + esc(it.kind || '') + '" list="dlKind"></td>' +
+        '<td><div class="pkchips">' + mine.map(function (id) { return '<span class="chip acc" title="' + esc(CH[id].name) + '">' + esc(CH[id].part || CH[id].name) + '<button type="button" data-pchx="' + i + '|' + esc(id) + '" title="เอาออก">' + ic('x') + '</button></span>'; }).join('') +
+        (free.length ? '<select class="input sm pkchadd" data-pcha="' + i + '"><option value="">' + (mine.length ? '+ เพิ่ม' : '+ ผูกตารางไซซ์') + '</option>' + free.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('') + '</select>' : (charts.length ? '' : '<span class="small muted">–</span>')) + '</div></td>' +
+        '<td><div class="row" style="flex-wrap:nowrap;gap:6px">' + (it.image ? '<span class="pthumb">' + imgTag(it.image, '') + '</span>' : '') + '<input type="hidden" data-p="image" value="' + esc(it.image || '') + '">' +
         '<button type="button" class="btn sm" data-pimg="' + i + '" data-busy="…">' + ic('upload') + (it.image ? '' : 'รูป') + '</button>' + (it.image ? '<button type="button" class="iconbtn" data-pimgx="' + i + '" title="เอารูปออก">' + ic('x') + '</button>' : '') + '</div></td>' +
         '<td><button type="button" class="iconbtn" data-pdel="' + i + '" title="ลบรายการ">' + ic('trash') + '</button></td></tr>';
     }).join('') + '</tbody></table></div><datalist id="dlKind"><option value="ผ้า"><option value="ชุด/เสื้อ"></datalist>' +
@@ -1196,6 +1469,7 @@ function pickEditor(c) {
     '<div class="row" style="gap:20px;margin-bottom:14px"><label class="switch"><input type="checkbox" data-pc="allowDecline" ' + (c.allowDecline !== false ? 'checked' : '') + '><span class="tr"></span>มีตัวเลือก "ไม่ประสงค์"</label></div>' +
     '<div class="grid2"><div class="field"><label class="f">ข้อความปุ่ม "ไม่ประสงค์"</label><input class="input" data-pc="declineLabel" value="' + esc(c.declineLabel || 'ไม่ประสงค์รับ') + '"></div>' +
     '<div class="field"><label class="f">ผู้รับผิดชอบ / ติดต่อสอบถาม</label><div class="row" style="flex-wrap:nowrap"><input class="input" id="pkCtName" value="' + esc((c.contact || {}).name || '') + '" placeholder="หน่วยงาน"><input class="input" id="pkCtPhone" value="' + esc((c.contact || {}).phone || '') + '" placeholder="โทร" style="max-width:110px"></div></div></div></div></div>';
+  return h;
 }
 function readPickForm(ED) {
   var c = ED.config;
@@ -1205,6 +1479,7 @@ function readPickForm(ED) {
     var prev = c.items[+tr.dataset.pi] || {};
     var o = { key: $('[data-p=key]', tr).value.trim().toUpperCase(), label: $('[data-p=label]', tr).value.trim(), kind: $('[data-p=kind]', tr).value.trim(), image: $('[data-p=image]', tr).value };
     if (prev._new) o._new = true;
+    if (prev.charts && prev.charts.length) o.charts = prev.charts.slice();
     return o;
   });
   ED.audience = { mode: 'LIST' };
@@ -1215,15 +1490,33 @@ function bindPickEditor(ED, readForm, draw, isNew) {
   $$('[data-pdel]').forEach(function (b) { b.onclick = function () { readForm(); var it = ED.config.items[+b.dataset.pdel]; confirmBox({ title: 'ลบรายการ ' + it.key + '?', msg: esc(it.label || '(ว่าง)') + '<br>ถ้ามีผู้มีสิทธิ์หรือผู้เลือกแล้ว ระบบจะไม่ยอมให้ลบตอนบันทึก', danger: true, ok: 'ลบ' }).then(function (y) { if (y) { ED.config.items.splice(+b.dataset.pdel, 1); draw(); } }); }; });
   $$('[data-pimg]').forEach(function (b) { b.onclick = function () { if (isNew) return toast('กด "บันทึก" กิจกรรมก่อน แล้วจึงอัปโหลดรูป', 'warn'); readForm(); uploadImgFlow(ED.id, b).then(function (ref) { if (ref) { ED.config.items[+b.dataset.pimg].image = ref; draw(); toast('อัปโหลดรูปแล้ว กด "บันทึก" เพื่อใช้รูปนี้', 'ok'); } }); }; });
   $$('[data-pimgx]').forEach(function (b) { b.onclick = function () { readForm(); ED.config.items[+b.dataset.pimgx].image = ''; draw(); }; });
-  var cu = $('#pkCoverUp'); if (cu) cu.onclick = function () { if (isNew) return toast('กด "บันทึก" กิจกรรมก่อน แล้วจึงอัปโหลดรูป', 'warn'); readForm(); uploadImgFlow(ED.id, cu).then(function (ref) { if (ref) { ED.config.image = ref; draw(); toast('อัปโหลดรูปปกแล้ว กด "บันทึก" เพื่อใช้รูปนี้', 'ok'); } }); };
+  var cu = $('#pkCoverUp'); if (cu) cu.onclick = function () { if (isNew) return toast('กด "บันทึก" กิจกรรมก่อน แล้วจึงอัปโหลดรูป', 'warn'); readForm(); uploadImgFlow(ED.id, cu).then(function (ref) { if (ref) { ED.config.image = ref; if (ED.config.imageHero == null) ED.config.imageHero = true; draw(); toast('อัปโหลดรูปปกแล้ว กด "บันทึก" เพื่อใช้รูปนี้', 'ok'); } }); };
+  var cx = $('#pkCoverX'); if (cx) cx.onclick = function () { readForm(); ED.config.image = ''; draw(); };
+  var ci = $('#pkCover'); if (ci) ci.onchange = function () { readForm(); draw(); };
+  var cf = $('[data-pc=imageFit]'); if (cf) cf.onchange = function () { readForm(); draw(); };
+  // 18 พ.ย. 69: ผูก/เลิกผูกตารางไซซ์ · คลังตารางไซซ์
+  $$('[data-pcha]').forEach(function (sl) { sl.onchange = function () { if (!sl.value) return; readForm(); var it = ED.config.items[+sl.dataset.pcha]; it.charts = (it.charts || []).concat([sl.value]); draw(); }; });
+  $$('[data-pchx]').forEach(function (b) { b.onclick = function () { readForm(); var p = b.dataset.pchx.split('|'), it = ED.config.items[+p[0]]; it.charts = (it.charts || []).filter(function (x) { return x !== p[1]; }); draw(); }; });
+  var pr = $('#pkPreset'); if (pr) pr.onchange = function () { if (pr.value === '') return; readForm(); ED.config.sizeCharts = (ED.config.sizeCharts || []).concat([JSON.parse(JSON.stringify(SIZE_PRESETS[+pr.value]))]); draw(); toast('เพิ่มตารางไซซ์แล้ว — ผูกกับรายการในคอลัมน์ "ไซซ์" แล้วกด "บันทึก"', 'ok'); };
+  var cn = $('#pkChNew'); if (cn) cn.onclick = function () { readForm(); sizeChartModal(ED, null, draw); };
+  $$('[data-chedit]').forEach(function (b) { b.onclick = function () { readForm(); sizeChartModal(ED, +b.dataset.chedit, draw); }; });
+  $$('[data-chview]').forEach(function (b) { b.onclick = function () { var ch = ED.config.sizeCharts[+b.dataset.chview]; modal({ title: 'ตัวอย่างที่บุคลากรเห็น · ' + esc(ch.name), size: 'lg', body: pkChartHtml(ch, null) }); }; });
+  $$('[data-chdel]').forEach(function (b) { b.onclick = function () {
+    readForm(); var ch = ED.config.sizeCharts[+b.dataset.chdel], n = ED.config.items.filter(function (it) { return (it.charts || []).indexOf(ch.id) >= 0; }).length;
+    confirmBox({ title: 'ลบตารางไซซ์ "' + ch.name + '"?', msg: (n ? 'ตารางนี้ผูกกับ ' + n + ' รายการ — จะถูกเอาออกจากรายการด้วย<br>' : '') + 'ถ้ามีผู้เลือกไซซ์จากตารางนี้แล้ว ระบบจะไม่ยอมให้ลบตอนบันทึก', danger: true, ok: 'ลบ' }).then(function (y) {
+      if (!y) return; ED.config.sizeCharts.splice(+b.dataset.chdel, 1); ED.config.items.forEach(function (it) { if (it.charts) it.charts = it.charts.filter(function (x) { return x !== ch.id; }); }); draw();
+    });
+  }; });
+  var ep = $('#elPeople'); if (ep) ep.onclick = function () { eligPeopleModal(ED); };
   if (!isNew) loadEligibilitySummary(ED);
   var ib = $('#elImp'); if (ib) ib.onclick = function () { importEligibilityFlow(ED); };
   var tb = $('#elTpl'); if (tb) tb.onclick = function () { eligibilityTemplate(ED); };
 }
 function eligibilityCard(ED, isNew) {
-  return '<div class="card"><div class="hd"><div><h3>' + ic('users') + ' ผู้มีสิทธิ์ + ตัวเลือกของแต่ละคน</h3><div class="small muted">นำเข้าจาก Excel: รหัสบุคลากร + ตัวเลือก 1–3 (ข้อความหรือรหัสรายการ)</div></div></div><div class="bd">' +
+  return '<div class="card"><div class="hd"><div><h3>' + ic('users') + ' ผู้มีสิทธิ์ + ตัวเลือกของแต่ละคน</h3><div class="small muted">นำเข้าจาก Excel ทั้งชุด หรือเพิ่ม/แก้ทีละคน</div></div></div><div class="bd">' +
     (isNew ? '<div class="muted small">กด "บันทึก" กิจกรรมก่อน แล้วจึงนำเข้ารายชื่อผู้มีสิทธิ์</div>'
-      : '<div id="elSum">' + skel(1) + '</div><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="elImp">' + ic('upload') + 'นำเข้ารายชื่อผู้มีสิทธิ์</button><button type="button" class="btn" id="elTpl">' + ic('download') + 'เทมเพลต</button></div>' +
+      : '<div id="elSum">' + skel(1) + '</div><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="elPeople">' + ic('users') + 'จัดการรายคน</button><button type="button" class="btn" id="elImp">' + ic('upload') + 'นำเข้าจาก Excel</button><button type="button" class="btn" id="elTpl">' + ic('download') + 'เทมเพลต</button></div>' +
+        '<div class="small muted" style="margin-top:8px">' + ic('users') + ' <b>จัดการรายคน</b> = ค้นหา เพิ่มคนใหม่ แก้/ลบสิทธิ์ทีละคน (มีบันทึกประวัติ)</div>' +
         '<div class="small muted" style="margin-top:8px">' + ic('info') + ' ข้อความที่สะกดต่างกันเล็กน้อย (ช่องว่าง จุด # ฎ/ฏ) ระบบจับคู่ให้ · ข้อความที่ไม่ตรงรายการใดเลยจะแสดงให้ตรวจหลังนำเข้า</div>') + '</div></div>';
 }
 function loadEligibilitySummary(ED) {
